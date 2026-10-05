@@ -1,0 +1,185 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>岗位搜索与变更追踪 · 题目附件</title><style>
+    *{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#1b2d46;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8}header{padding:46px max(24px,calc((100vw - 1200px)/2));background:#132f50;color:white}header small{color:#a9c7e7;letter-spacing:.12em}header h1{margin:8px 0;font-size:30px}main{max-width:1250px;margin:auto;display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px;padding:28px 24px}nav{position:sticky;top:22px;align-self:start;font-size:14px}nav a{display:block;padding:7px 12px;text-decoration:none;color:#356286;border-radius:7px}nav a:hover{background:#dfeafa}article{min-width:0}section,.files,figure{background:white;border:1px solid #e0e7f0;border-radius:16px;padding:25px 30px;margin:0 0 20px}section{scroll-margin-top:20px}h1{font-size:25px;line-height:1.5}h2{font-size:21px;margin-top:28px}h3{font-size:18px}a{color:#1967a8;text-underline-offset:3px}table{border-collapse:collapse;font-size:14px;width:100%;display:block;overflow:auto}td,th{border:1px solid #dce5ef;padding:9px 12px;text-align:left}th{background:#edf3fa;white-space:nowrap}td{min-width:120px}pre{background:#112940;color:#e6f2ff;border-radius:9px;padding:17px;overflow:auto}code{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}p code,li code,td code{background:#edf2f7;padding:2px 5px;border-radius:4px}img{width:100%;height:auto}figcaption{font-size:13px;text-align:right}.files a{display:inline-block;margin:4px 6px 4px 0;background:#edf4fa;border:1px solid #dce7f2;border-radius:7px;padding:4px 9px;font-size:13px;max-width:100%;overflow-wrap:anywhere}.files h2{margin-top:0}.muted{color:#69819d;font-size:13px} @media(max-width:780px){main{display:block;padding:16px}nav{position:static;margin-bottom:20px}nav a{display:inline-block}section,.files,figure{padding:18px}header{padding:30px 20px}header h1{font-size:26px}} @media print{nav{display:none}main{display:block}header{color:#172c4c;background:white}section,.files,figure{break-inside:avoid}}
+    </style><header><small>QUESTION 01 · ATTACHMENTS</small><h1>岗位搜索与变更追踪</h1></header><main><nav><a href="#section-0">使用说明</a><a href="#section-1">采集记录与来源证据</a><a href="#section-2">变更回放格式</a><a href="#files">附件文件</a></nav><article><section id="section-0"><h1>岗位搜索与变更追踪 · 附件</h1>
+<p>先查看 <code>collection-guide.md</code>，用两个真实来源完成采集，再填写记录。这里不含岗位数据，也不指定招聘来源。</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>collection-runs.csv</td>
+<td>每次、每个来源的采集执行记录，空模板</td>
+</tr>
+<tr>
+<td>source-evidence.csv</td>
+<td>两类来源的真实性与岗位数量证据，空模板</td>
+</tr>
+<tr>
+<td>collection-guide.md</td>
+<td>记录字段和证据要求</td>
+</tr>
+<tr>
+<td>replay-format.md / replay.schema.json</td>
+<td>基于自己真实快照制作回放的格式</td>
+</tr>
+<tr>
+<td>replay-empty.json</td>
+<td>空回放清单，仅供填写，未填完整不能作为验收资料</td>
+</tr>
+<tr>
+<td>test-cases.csv</td>
+<td>变更、关注、去重与失败场景</td>
+</tr>
+</tbody></table>
+<p>CSV 为 UTF-8（带 BOM），可用 Excel 打开。回放格式是材料交换格式，不限制应用内部表结构，也不要求另做回放管理后台。</p>
+</section><section id="section-1"><h1>采集记录与来源证据</h1>
+<h2>怎样填写</h2>
+<p>每个来源每次运行填一行 <code>collection-runs.csv</code>；每个来源填一行 <code>source-evidence.csv</code>。两类来源各至少 10 个有效岗位，不能将招聘平台的企业主页当成大厂官方招聘网站。</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>run_id / source_id</td>
+<td>自定唯一标识；同一次运行、同一来源保持一致</td>
+</tr>
+<tr>
+<td>source_type</td>
+<td><code>recruitment_platform</code> 或 <code>company_careers</code></td>
+</tr>
+<tr>
+<td>entry_url / source_name</td>
+<td>实际访问地址与来源名称</td>
+</tr>
+<tr>
+<td>company_official_evidence_url</td>
+<td>官方站填公司官网指向招聘入口等可核对依据；招聘平台可留空</td>
+</tr>
+<tr>
+<td>started_at / finished_at / collected_at</td>
+<td>含时区的 ISO 8601 时间</td>
+</tr>
+<tr>
+<td>status</td>
+<td><code>success</code>、<code>partial</code>、<code>failed</code>；失败也保留一行</td>
+</tr>
+<tr>
+<td>http_status</td>
+<td>实际响应状态码；无响应留空</td>
+</tr>
+<tr>
+<td>fetched_count / valid_count</td>
+<td>抓到的条目数 / 去重后成功解析的有效岗位数</td>
+</tr>
+<tr>
+<td>new_count / changed_count / unchanged_count</td>
+<td>成功处理岗位的新增 / 更新 / 无变化数量；三项合计应等于 valid_count</td>
+</tr>
+<tr>
+<td>failed_count</td>
+<td>抓取到但解析或保存失败的条目数；来源级请求失败另填 error，不虚构条目数</td>
+</tr>
+<tr>
+<td>raw_snapshot_path / snapshot_path</td>
+<td>提交材料中的相对路径，保留实际页面或响应；不只交截图结论</td>
+</tr>
+<tr>
+<td>raw_sha256 / snapshot_sha256</td>
+<td>对相应文件原始字节计算 SHA-256</td>
+</tr>
+<tr>
+<td>error_code / error_message</td>
+<td>实际失败原因；成功留空，不把失败写成空列表成功</td>
+</tr>
+<tr>
+<td>valid_unique_jobs</td>
+<td>本来源去重后有效岗位数；不是历次运行数量累加</td>
+</tr>
+<tr>
+<td>sample_detail_urls</td>
+<td>多条详情链接以英文分号分隔</td>
+</tr>
+<tr>
+<td>collection_method</td>
+<td>公开页面 / 公开接口 / 浏览器自动化及入口位置</td>
+</tr>
+<tr>
+<td>access_notes</td>
+<td>访问条件、分页方法、请求间隔等复现说明</td>
+</tr>
+</tbody></table>
+<p>岗位证据至少能对应名称、来源身份、详情链接及采集时间。来源未公开的截止日期、招聘状态保留空值，界面显示“未提供”。同名岗位是否同一条由来源和稳定 ID（或规范化详情 URL）决定，不由标题决定。</p>
+<h2>复核步骤</h2>
+<ol>
+<li>从应用发起两类来源采集，核对来源各不少于 10 条。</li>
+<li>随机打开至少 2 条/来源的详情链接，与快照及应用内容核对。</li>
+<li>重复采集，核对有效岗位去重、无变化不产生日志。</li>
+<li>保存采集日志与原始文件；随后再按回放格式验证变更。不能用回放代替上述真实采集。</li>
+</ol>
+</section><section id="section-2"><h1>变更回放格式</h1>
+<p>回放用于模拟短时间内网站没有发生的变化。所有回放必须从候选人真实抓取的快照复制修改；原始文件单独保留。界面和证据明确标为“回放”，不得宣称是新抓取的数据。</p>
+<p><code>replay-empty.json</code> 是待填写的空模板；<code>replay.schema.json</code> 使用 JSON Schema 2020-12，填写后的材料应符合结构。系统无需按此设计数据库。</p>
+<h2>清单字段</h2>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>schemaVersion</td>
+<td>固定 <code>1.0</code></td>
+</tr>
+<tr>
+<td>mode</td>
+<td>固定 <code>replay</code></td>
+</tr>
+<tr>
+<td>provenance</td>
+<td>真实来源 ID、URL、采集时间、原快照相对路径和 SHA-256</td>
+</tr>
+<tr>
+<td>steps[].stepId</td>
+<td>场景中的唯一步骤 ID</td>
+</tr>
+<tr>
+<td>steps[].kind</td>
+<td><code>snapshot</code>（快照）、<code>source_failure</code>（来源失败）</td>
+</tr>
+<tr>
+<td>snapshotFile / sha256</td>
+<td>该步骤快照文件与校验值；失败步骤不提供</td>
+</tr>
+<tr>
+<td>failureReason</td>
+<td>失败步骤填写明确原因</td>
+</tr>
+<tr>
+<td>changes</td>
+<td>回放人为修改的条目及前后值；无变化时空数组</td>
+</tr>
+<tr>
+<td>expected</td>
+<td>预期的岗位及关注动态变化，用文字说明</td>
+</tr>
+</tbody></table>
+<p>每个快照 JSON 的结构为 <code>{ &quot;sourceId&quot;: &quot;自定来源ID&quot;, &quot;jobs&quot;: [] }</code>。<code>jobs</code> 中各条至少包含 <code>identity</code>、<code>title</code>、<code>company</code>、<code>city</code>、<code>requirements</code>、<code>deadline</code>、<code>status</code>、<code>detailUrl</code>；其中 identity 是来源稳定 ID 或规范化详情 URL，deadline/status 可为 null。修改 status 为 closed 时需在回放中加 <code>explicitClosedEvidence</code> 说明模拟的明确关闭证据。真实采集也必须有来源明确关闭证据，不能只因列表缺失判关。</p>
+<h2>推荐步骤顺序</h2>
+<ol>
+<li>用原始真实快照建立初始岗位，此时不产生变更动态。</li>
+<li>让账号 A 关注其中岗位，再复制快照，只修改该岗位的 requirements；changes 写明 identity、field、before、after。</li>
+<li>重复加载同一文件，不新增变更。</li>
+<li>从列表快照删去该岗位：现有岗位保留，不自动关闭。</li>
+<li>使用 source_failure 步骤模拟该来源超时：保留岗位，另一个来源可继续。</li>
+<li>复制原快照，模拟来源明确关闭：记录旧新状态和依据；A 收到动态。</li>
+<li>A 取消关注，再改变截止时间：旧动态可保留，不向 A 新增动态。稍后关注不补发关注之前的变更。</li>
+</ol>
+<p><code>changes</code>、文件 hash 与 expected 是复核材料，不能作为直接写入业务结果的“答案”。应用仍须自己比较快照并执行变更规则。</p>
+</section><div class="files" id="files"><h2>附件文件</h2><a href="README.md">README.md</a><a href="collection-guide.md">collection-guide.md</a><a href="collection-runs.csv">collection-runs.csv</a><a href="replay-empty.json">replay-empty.json</a><a href="replay-format.md">replay-format.md</a><a href="replay.schema.json">replay.schema.json</a><a href="source-evidence.csv">source-evidence.csv</a><a href="test-cases.csv">test-cases.csv</a><p class="muted">本页可离线阅读。CSV 可用电子表格软件打开；外部来源链接需要联网。更新日期：2026-10-04。</p></div></article></main></html>
