@@ -1,6 +1,6 @@
 # 岗位搜索与变更追踪
 
-面向求职者的岗位搜索、条件收藏、岗位关注与变化追踪应用。本仓库当前完成基础工程和 Docker 部署骨架；真实采集、账号业务、筛选、关注与回放将在后续阶段实现。
+面向求职者的岗位搜索、条件收藏、岗位关注与变化追踪应用。当前已完成 Docker 基础工程、核心采集数据模型和服务端 Session 登录；真实采集、筛选、关注与回放将在后续阶段实现。
 
 ## 已确定的数据来源
 
@@ -29,7 +29,7 @@
    Copy-Item .env.example .env
    ```
 
-2. 修改 `.env` 中的数据库密码和 `APP_SECRET_KEY`。
+2. 修改 `.env` 中的数据库密码、三个预置账号密码，以及 HTTPS 环境下的 Cookie 配置。
 
 3. 构建并启动：
 
@@ -52,6 +52,16 @@
    curl http://localhost:8080/api/health/database
    ```
 
+## 预置账号与登录
+
+首次启动时会幂等创建以下账号，密码由 `.env` 中对应的 `SEED_*_PASSWORD` 配置：
+
+- `jobseeker1`：普通求职者
+- `jobseeker2`：普通求职者，用于验证用户数据隔离
+- `maintainer`：数据维护账号
+
+应用通过 Nginx 同源访问后端，认证使用数据库中的服务端 Session 和 HttpOnly Cookie。HTTP 验收环境使用 `SESSION_COOKIE_SECURE=false`；部署到 HTTPS 后必须设为 `true`。重新运行初始化不会覆盖已有账号密码。
+
 停止容器但保留数据：
 
 ```bash
@@ -72,7 +82,8 @@ docker-compose up --build --force-recreate
 - 已提供后端应用及数据库健康检查。
 - 已建立 Alembic，容器启动时自动执行迁移；当前主模型包含用户、来源、采集运行、证据索引、岗位、岗位观察和两级变更记录。
 - 已建立完整的证据目录约定并纳入附件模板。
-- 尚未实现真实采集、认证、筛选方案、关注、动态或回放服务逻辑。
+- 已实现三个预置账号、Argon2id 密码、服务端 Session 登录/退出、登录状态恢复和维护员角色限制。
+- 尚未实现真实采集、筛选方案、关注、动态或回放服务逻辑。
 - 尚未加入 Playwright；将在核心业务完成后再添加端到端测试。
 
 详细目录和证据要求见 `docs/architecture.md`、`docs/sources.md` 与 `evidence/README.md`。

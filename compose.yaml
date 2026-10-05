@@ -20,8 +20,12 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://job_tracker:change-me-for-production@postgres:5432/job_tracker}
       APP_ENV: ${APP_ENV:-development}
-      APP_SECRET_KEY: ${APP_SECRET_KEY:-replace-with-a-long-random-value}
-      ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-30}
+      SESSION_HOURS: ${SESSION_HOURS:-24}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-job_tracker_session}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SEED_JOBSEEKER1_PASSWORD: ${SEED_JOBSEEKER1_PASSWORD:-exam-jobseeker1}
+      SEED_JOBSEEKER2_PASSWORD: ${SEED_JOBSEEKER2_PASSWORD:-exam-jobseeker2}
+      SEED_MAINTAINER_PASSWORD: ${SEED_MAINTAINER_PASSWORD:-exam-maintainer}
       EVIDENCE_ROOT: /evidence
     depends_on:
       postgres:
