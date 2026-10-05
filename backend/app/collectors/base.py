@@ -39,6 +39,30 @@ class NormalizedJob:
     deadline_raw: str | None = None
     deadline_at: datetime | None = None
     recruitment_status: str | None = None
+    explicit_closed: bool = False
+    closed_evidence_text: str | None = None
+
+
+class ExplicitClosureDetected(ValueError):
+    pass
+
+
+def tracked_content_hash(
+    requirements: str,
+    deadline_raw: str | None,
+    recruitment_status: str | None,
+) -> str:
+    canonical = json.dumps(
+        {
+            "requirements": requirements,
+            "deadline": deadline_raw,
+            "recruitment_status": recruitment_status,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 class CollectionRequestError(RuntimeError):

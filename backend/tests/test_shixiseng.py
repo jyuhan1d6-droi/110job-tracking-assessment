@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import pytest
 
+from app.collectors.base import ExplicitClosureDetected
 from app.collectors.shixiseng import has_private_use_characters, parse_detail, parse_list
 
 
@@ -61,3 +62,12 @@ def test_same_title_with_different_shixiseng_ids_stays_distinct_and_urls_are_can
     assert first.detail_url == "https://www.shixiseng.com/intern/inn_alpha"
     assert second.detail_url == "https://www.shixiseng.com/intern/inn_beta"
     assert "?" not in first.detail_url
+
+
+def test_shixiseng_requires_explicit_closure_text():
+    with pytest.raises(ExplicitClosureDetected, match="职位已下架"):
+        parse_detail("<main>该职位已下架</main>".encode(), "inn_closed")
+
+    with pytest.raises(ValueError, match="详情页结构") as error:
+        parse_detail("<main>页面暂时无法访问</main>".encode(), "inn_unavailable")
+    assert not isinstance(error.value, ExplicitClosureDetected)

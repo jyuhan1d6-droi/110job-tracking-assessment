@@ -8,7 +8,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.collectors.base import CapturedResponse, CollectionRequestError, EvidenceHttpClient, NormalizedJob, write_evidence
+from app.collectors.base import (
+    CapturedResponse,
+    CollectionRequestError,
+    EvidenceHttpClient,
+    ExplicitClosureDetected,
+    NormalizedJob,
+    tracked_content_hash,
+    write_evidence,
+)
 from app.collectors.careers_360 import Careers360Collector, parse_detail, parse_list
 from app.core.config import settings
 from app.models.collection import CollectionArtifact, CollectionRun
@@ -70,6 +78,35 @@ def _change_hash(job: Job, normalized: NormalizedJob) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def compare_tracked_fields(job: Job, normalized: NormalizedJob) -> list[tuple[str, str | None, str | None]]:
+    pairs = (
+        ("requirements", job.requirements, normalized.requirements),
+        ("deadline", job.deadline_raw, normalized.deadline_raw),
+        ("recruitment_status", job.recruitment_status, normalized.recruitment_status),
+    )
+    return [(field, before, after) for field, before, after in pairs if before != after]
+
+
+def normalized_explicit_closure(job: Job, evidence_text: str) -> NormalizedJob:
+    evidence = evidence_text.strip()
+    if not evidence:
+        raise ValueError("明确关闭必须包含来源证据文本")
+    return NormalizedJob(
+        external_identity=job.external_identity,
+        title=job.title,
+        company=job.company,
+        city=job.city,
+        requirements=job.requirements,
+        deadline_raw=job.deadline_raw,
+        deadline_at=job.deadline_at,
+        recruitment_status="closed",
+        explicit_closed=True,
+        closed_evidence_text=evidence,
+        detail_url=job.detail_url,
+        content_hash=tracked_content_hash(job.requirements, job.deadline_raw, "closed"),
+    )
+
+
 def _ingest_job(
     db: Session,
     *,
@@ -80,15 +117,19 @@ def _ingest_job(
     detail_artifact: CollectionArtifact,
     observed_at: datetime,
 ) -> str:
+    if normalized.recruitment_status == "closed" and (
+        not normalized.explicit_closed or not normalized.closed_evidence_text
+    ):
+        raise ValueError("只有带明确来源证据的岗位才能记录为关闭")
+    if normalized.explicit_closed and normalized.recruitment_status != "closed":
+        raise ValueError("explicit_closed 只能与 closed 状态同时使用")
     job = db.scalar(
         select(Job).where(
             Job.source_id == source.id,
             Job.external_identity == normalized.external_identity,
         )
     )
-    previous_requirements = job.requirements if job else None
-    previous_deadline = job.deadline_raw if job else None
-    previous_status = job.recruitment_status if job else None
+    changes = compare_tracked_fields(job, normalized) if job else []
     if job is None:
         job = Job(
             source_id=source.id,
@@ -150,7 +191,8 @@ def _ingest_job(
         content_hash=normalized.content_hash,
         list_artifact_id=list_artifact.id,
         detail_artifact_id=detail_artifact.id,
-        explicit_closed=False,
+        explicit_closed=normalized.explicit_closed,
+        closed_evidence_text=normalized.closed_evidence_text,
         observed_at=observed_at,
     )
     db.add(observation)
@@ -166,31 +208,13 @@ def _ingest_job(
         )
         db.add(change_set)
         db.flush()
-        if previous_requirements != normalized.requirements:
+        for field_name, before_text, after_text in changes:
             db.add(
                 JobFieldChange(
                     change_set_id=change_set.id,
-                    field_name="requirements",
-                    before_text=previous_requirements,
-                    after_text=normalized.requirements,
-                )
-            )
-        if previous_deadline != normalized.deadline_raw:
-            db.add(
-                JobFieldChange(
-                    change_set_id=change_set.id,
-                    field_name="deadline",
-                    before_text=previous_deadline,
-                    after_text=normalized.deadline_raw,
-                )
-            )
-        if previous_status != normalized.recruitment_status:
-            db.add(
-                JobFieldChange(
-                    change_set_id=change_set.id,
-                    field_name="recruitment_status",
-                    before_text=previous_status,
-                    after_text=normalized.recruitment_status,
+                    field_name=field_name,
+                    before_text=before_text,
+                    after_text=after_text,
                 )
             )
     return result
@@ -248,7 +272,18 @@ def collect_360_careers(db: Session, *, triggered_by_user_id: uuid.UUID) -> Coll
                     filename=f"detail-{job_id}.json",
                     artifact_type="detail_json",
                 )
-                normalized = parse_detail(detail_response.json())
+                try:
+                    normalized = parse_detail(detail_response.json())
+                except ExplicitClosureDetected as exc:
+                    existing = db.scalar(
+                        select(Job).where(
+                            Job.source_id == source.id,
+                            Job.external_identity == f"360-careers:{job_id}",
+                        )
+                    )
+                    if existing is None:
+                        raise ValueError("首次观察即关闭且缺少岗位字段，未建立岗位") from exc
+                    normalized = normalized_explicit_closure(existing, str(exc))
                 result = _ingest_job(
                     db,
                     run=run,

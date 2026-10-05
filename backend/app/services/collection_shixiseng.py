@@ -6,11 +6,17 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.collectors.base import CollectionRequestError, EvidenceHttpClient
+from app.collectors.base import CollectionRequestError, EvidenceHttpClient, ExplicitClosureDetected
 from app.collectors.shixiseng import ShixisengCollector, has_private_use_characters, parse_detail, parse_list
 from app.models.collection import CollectionRun
+from app.models.job import Job
 from app.models.source import Source
-from app.services.collection import CollectionConflictError, _ingest_job, _save_artifact
+from app.services.collection import (
+    CollectionConflictError,
+    _ingest_job,
+    _save_artifact,
+    normalized_explicit_closure,
+)
 
 TARGET_VALID_JOBS = 10
 MAX_LIST_PAGES = 3
@@ -90,7 +96,18 @@ def collect_shixiseng(db: Session, *, triggered_by_user_id: uuid.UUID) -> Collec
                         "user-agent": ShixisengCollector.headers["User-Agent"],
                     },
                 )
-                normalized = parse_detail(detail_response.body, job_id)
+                try:
+                    normalized = parse_detail(detail_response.body, job_id)
+                except ExplicitClosureDetected as exc:
+                    existing = db.scalar(
+                        select(Job).where(
+                            Job.source_id == source.id,
+                            Job.external_identity == f"shixiseng:{job_id}",
+                        )
+                    )
+                    if existing is None:
+                        raise ValueError("首次观察即关闭且缺少岗位字段，未建立岗位") from exc
+                    normalized = normalized_explicit_closure(existing, str(exc))
                 result = _ingest_job(
                     db,
                     run=run,

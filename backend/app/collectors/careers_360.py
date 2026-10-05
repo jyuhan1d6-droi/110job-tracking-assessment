@@ -1,9 +1,13 @@
-import hashlib
-import json
 import re
 from typing import Any
 
-from app.collectors.base import CapturedResponse, EvidenceHttpClient, NormalizedJob
+from app.collectors.base import (
+    CapturedResponse,
+    EvidenceHttpClient,
+    ExplicitClosureDetected,
+    NormalizedJob,
+    tracked_content_hash,
+)
 
 BASE_URL = "https://hr.360.cn"
 LIST_URL = f"{BASE_URL}/v2/index/getlistsearch"
@@ -24,6 +28,9 @@ def parse_list(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 def parse_detail(payload: dict[str, Any]) -> NormalizedJob:
     if payload.get("code") != 0 or not isinstance(payload.get("data"), dict):
+        message = _clean_text(payload.get("msg"))
+        if any(phrase in message for phrase in ("已下架", "已结束", "停止招聘", "已关闭")):
+            raise ExplicitClosureDetected(message)
         raise ValueError(f"360 详情响应异常：code={payload.get('code')!r}")
     data = payload["data"]
     job_id = _clean_text(data.get("id"))
@@ -39,18 +46,15 @@ def parse_detail(payload: dict[str, Any]) -> NormalizedJob:
     if qualification and qualification not in description:
         parts.append(f"任职要求\n{qualification}")
     requirements = "\n\n".join(parts)
+    raw_status = _clean_text(data.get("status") or data.get("job_status") or data.get("state"))
+    closed_values = {"closed", "offline", "已下架", "已结束", "停止招聘", "已关闭"}
+    open_values = {"open", "招聘中", "在招"}
+    status_key = raw_status.lower()
+    recruitment_status = "closed" if status_key in closed_values else "open" if status_key in open_values else None
+    explicit_closed = recruitment_status == "closed"
+    closed_evidence = f"360 明确状态字段：{raw_status}" if explicit_closed else None
     identity = f"360-careers:{job_id}"
     detail_url = f"{BASE_URL}/hr/detail/{job_id}"
-    canonical = json.dumps(
-        {
-            "requirements": requirements,
-            "deadline": None,
-            "recruitment_status": None,
-        },
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
     return NormalizedJob(
         external_identity=identity,
         title=title,
@@ -58,7 +62,10 @@ def parse_detail(payload: dict[str, Any]) -> NormalizedJob:
         city=city,
         requirements=requirements,
         detail_url=detail_url,
-        content_hash=hashlib.sha256(canonical).hexdigest(),
+        recruitment_status=recruitment_status,
+        explicit_closed=explicit_closed,
+        closed_evidence_text=closed_evidence,
+        content_hash=tracked_content_hash(requirements, None, recruitment_status),
     )
 
 

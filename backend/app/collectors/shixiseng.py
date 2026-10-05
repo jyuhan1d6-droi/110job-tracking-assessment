@@ -1,5 +1,3 @@
-import hashlib
-import json
 import re
 from datetime import datetime
 from typing import Any
@@ -8,12 +6,19 @@ from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
 
-from app.collectors.base import CapturedResponse, EvidenceHttpClient, NormalizedJob
+from app.collectors.base import (
+    CapturedResponse,
+    EvidenceHttpClient,
+    ExplicitClosureDetected,
+    NormalizedJob,
+    tracked_content_hash,
+)
 
 BASE_URL = "https://www.shixiseng.com"
 LIST_URL = f"{BASE_URL}/interns/"
 JOB_ID_PATTERN = re.compile(r"/intern/(inn_[A-Za-z0-9]+)")
 DEADLINE_PATTERN = re.compile(r"截止日期[：:]\s*(\d{4}-\d{2}-\d{2})")
+CLOSED_PATTERN = re.compile(r"(?:该)?职位(?:已下架|已结束|已关闭|已停止招聘)|停止招聘")
 
 
 def has_private_use_characters(value: str) -> bool:
@@ -47,6 +52,10 @@ def parse_list(html: bytes) -> list[tuple[str, str]]:
 
 def parse_detail(html: bytes, expected_job_id: str) -> NormalizedJob:
     soup = BeautifulSoup(html, "html.parser")
+    page_text = clean_text(soup.get_text(" ", strip=True))
+    closed_match = CLOSED_PATTERN.search(page_text)
+    if closed_match:
+        raise ExplicitClosureDetected(closed_match.group(0))
     title_node = soup.select_one(".new_job_name")
     city_node = soup.select_one(".job_position")
     requirements_node = soup.select_one(".job_detail")
@@ -75,12 +84,6 @@ def parse_detail(html: bytes, expected_job_id: str) -> NormalizedJob:
             break
 
     detail_url = urlunsplit(("https", "www.shixiseng.com", f"/intern/{expected_job_id}", "", ""))
-    canonical = json.dumps(
-        {"requirements": requirements, "deadline": deadline_raw, "recruitment_status": None},
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
     return NormalizedJob(
         external_identity=f"shixiseng:{expected_job_id}",
         title=title,
@@ -91,7 +94,7 @@ def parse_detail(html: bytes, expected_job_id: str) -> NormalizedJob:
         deadline_at=deadline_at,
         recruitment_status=None,
         detail_url=detail_url,
-        content_hash=hashlib.sha256(canonical).hexdigest(),
+        content_hash=tracked_content_hash(requirements, deadline_raw, None),
     )
 
 

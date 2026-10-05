@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.collectors.base import write_evidence
+from app.collectors.base import ExplicitClosureDetected, write_evidence
 from app.collectors.careers_360 import parse_detail, parse_list
 
 
@@ -76,6 +76,40 @@ def test_360_whitespace_normalization_produces_same_content_hash():
     })
     assert first.requirements == second.requirements
     assert first.content_hash == second.content_hash
+
+
+def test_360_only_accepts_explicit_closed_status():
+    with pytest.raises(ExplicitClosureDetected, match="已下架"):
+        parse_detail({"code": -1, "msg": "该职位已下架", "data": None})
+
+    closed = parse_detail({
+        "code": 0,
+        "data": {
+            "id": "closed-id",
+            "title": "岗位",
+            "area": "北京",
+            "description": "岗位要求",
+            "qualification": "",
+            "status": "已结束",
+        },
+    })
+    assert closed.recruitment_status == "closed"
+    assert closed.explicit_closed is True
+    assert closed.closed_evidence_text == "360 明确状态字段：已结束"
+
+    unknown = parse_detail({
+        "code": 0,
+        "data": {
+            "id": "unknown-id",
+            "title": "岗位",
+            "area": "北京",
+            "description": "岗位要求",
+            "qualification": "",
+            "status": "未知",
+        },
+    })
+    assert unknown.recruitment_status is None
+    assert unknown.explicit_closed is False
 
 
 def test_evidence_writer_preserves_original_bytes(tmp_path):
