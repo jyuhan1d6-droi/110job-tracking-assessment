@@ -49,6 +49,35 @@ def test_parse_detail_rejects_missing_required_fields():
         parse_detail({"code": 0, "data": {"id": "x", "title": "岗位"}})
 
 
+def test_same_title_with_different_360_ids_stays_distinct():
+    base = {
+        "title": "销售经理",
+        "area": "北京",
+        "description": "负责销售工作",
+        "qualification": "",
+    }
+    first = parse_detail({"code": 0, "data": {**base, "id": "job-a"}})
+    second = parse_detail({"code": 0, "data": {**base, "id": "job-b"}})
+    assert first.title == second.title
+    assert first.external_identity == "360-careers:job-a"
+    assert second.external_identity == "360-careers:job-b"
+    assert first.external_identity != second.external_identity
+    assert first.detail_url != second.detail_url
+
+
+def test_360_whitespace_normalization_produces_same_content_hash():
+    first = parse_detail({
+        "code": 0,
+        "data": {"id": "same", "title": "岗位", "area": "北京", "description": "职责\r\n熟悉  Python", "qualification": ""},
+    })
+    second = parse_detail({
+        "code": 0,
+        "data": {"id": "same", "title": "岗位", "area": "北京", "description": "职责\n 熟悉 Python ", "qualification": ""},
+    })
+    assert first.requirements == second.requirements
+    assert first.content_hash == second.content_hash
+
+
 def test_evidence_writer_preserves_original_bytes(tmp_path):
     raw = b'{"text":"original\\r\\nbytes","value":1}'
     target = write_evidence(tmp_path, Path("raw/360/test.json"), raw)

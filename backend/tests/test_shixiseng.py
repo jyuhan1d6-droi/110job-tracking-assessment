@@ -43,3 +43,21 @@ def test_private_use_font_characters_are_rejected():
     """.encode()
     with pytest.raises(ValueError, match="自定义字体"):
         parse_detail(html, "inn_private")
+
+
+def test_same_title_with_different_shixiseng_ids_stays_distinct_and_urls_are_canonical():
+    html = """
+    <div class="new_job_name">产品经理</div>
+    <span class="job_position" title="上海">上海</span>
+    <div class="job_detail">负责产品设计</div>
+    <div class="job-about"><a class="com-name">示例公司</a></div>
+    """.encode()
+    first = parse_detail(html, "inn_alpha")
+    second = parse_detail(html, "inn_beta")
+    assert first.title == second.title
+    assert first.external_identity == "shixiseng:inn_alpha"
+    assert second.external_identity == "shixiseng:inn_beta"
+    assert first.external_identity != second.external_identity
+    assert first.detail_url == "https://www.shixiseng.com/intern/inn_alpha"
+    assert second.detail_url == "https://www.shixiseng.com/intern/inn_beta"
+    assert "?" not in first.detail_url

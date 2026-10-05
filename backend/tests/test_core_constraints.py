@@ -171,3 +171,55 @@ def test_repeated_hash_across_later_changes_is_allowed_and_close_requires_eviden
             """,
             (uuid.uuid4(), run_invalid_close, job_id, "d" * 64),
         )
+
+
+def test_same_title_with_different_ids_is_kept_for_each_source_kind(db):
+    user_id = uuid.uuid4()
+    db.execute(
+        """
+        INSERT INTO users (id, username, password_hash, display_name, role, is_active)
+        VALUES (%s, %s, 'hash', 'Maintainer', 'maintainer', true)
+        """,
+        (user_id, f"identity-maintainer-{user_id}"),
+    )
+    for code, source_type, identity_prefix in (
+        ("identity-360", "company_careers", "360-careers"),
+        ("identity-shixiseng", "recruitment_platform", "shixiseng"),
+    ):
+        source_id = uuid.uuid4()
+        db.execute(
+            """
+            INSERT INTO sources (
+                id, code, name, source_type, entry_url, collector_key,
+                request_interval_ms, timeout_seconds, max_retries, enabled
+            ) VALUES (%s, %s, 'Identity test', %s, 'https://example.test',
+                      'identity_test', 0, 15, 0, true)
+            """,
+            (source_id, f"{code}-{source_id}", source_type),
+        )
+        run_id = insert_run(db, user_id, source_id, status="success", new=2)
+        for suffix in ("a", "b"):
+            db.execute(
+                """
+                INSERT INTO jobs (
+                    id, source_id, external_identity, title, company, city, requirements,
+                    deadline_provided, status_provided, detail_url, first_seen_at, last_seen_at,
+                    current_content_hash, created_by_run_id, updated_by_run_id, is_visible
+                ) VALUES (%s, %s, %s, '同名岗位', 'Company', 'City', 'Requirements',
+                          false, false, %s, now(), now(), %s, %s, %s, true)
+                """,
+                (
+                    uuid.uuid4(),
+                    source_id,
+                    f"{identity_prefix}:{suffix}",
+                    f"https://example.test/{suffix}",
+                    suffix * 64,
+                    run_id,
+                    run_id,
+                ),
+            )
+        result = db.execute(
+            "SELECT count(*), count(DISTINCT external_identity) FROM jobs WHERE source_id = %s AND title = '同名岗位'",
+            (source_id,),
+        ).fetchone()
+        assert result == (2, 2)
