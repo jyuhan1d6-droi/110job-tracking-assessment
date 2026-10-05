@@ -53,6 +53,7 @@ def test_three_seed_accounts_login_and_role_boundaries():
             assert access.status_code == (200 if expected_role == "maintainer" else 403)
             if expected_role == "job_seeker":
                 assert client.post("/api/collection/sources/360-careers/runs").status_code == 403
+                assert client.post("/api/collection/sources/shixiseng/runs").status_code == 403
 
             assert client.post("/api/auth/logout").status_code == 204
             assert client.get("/api/auth/me").status_code == 401

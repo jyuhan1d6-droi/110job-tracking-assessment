@@ -1,25 +1,13 @@
 import hashlib
 import json
 import re
-from dataclasses import dataclass
 from typing import Any
 
-from app.collectors.base import CapturedResponse, EvidenceHttpClient
+from app.collectors.base import CapturedResponse, EvidenceHttpClient, NormalizedJob
 
 BASE_URL = "https://hr.360.cn"
 LIST_URL = f"{BASE_URL}/v2/index/getlistsearch"
 DETAIL_URL = f"{BASE_URL}/v2/index/getjobone"
-
-
-@dataclass(frozen=True)
-class NormalizedJob:
-    external_identity: str
-    title: str
-    company: str
-    city: str
-    requirements: str
-    detail_url: str
-    content_hash: str
 
 
 def _clean_text(value: Any) -> str:

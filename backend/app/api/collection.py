@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.collection import CollectionRun
 from app.models.user import User
 from app.services.collection import CollectionConflictError, collect_360_careers
+from app.services.collection_shixiseng import collect_shixiseng
 
 router = APIRouter(prefix="/collection", tags=["collection"])
 
@@ -40,6 +41,17 @@ def run_360_collection(
 ) -> CollectionRun:
     try:
         return collect_360_careers(db, triggered_by_user_id=user.id)
+    except CollectionConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.post("/sources/shixiseng/runs", response_model=RunResponse)
+def run_shixiseng_collection(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_maintainer)],
+) -> CollectionRun:
+    try:
+        return collect_shixiseng(db, triggered_by_user_id=user.id)
     except CollectionConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 

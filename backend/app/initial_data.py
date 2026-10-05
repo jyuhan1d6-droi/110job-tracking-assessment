@@ -33,24 +33,40 @@ def seed_users() -> int:
 
 
 def seed_sources() -> int:
+    sources = (
+        {
+            "code": "360-careers",
+            "name": "360 招聘",
+            "source_type": "company_careers",
+            "entry_url": "https://hr.360.cn/hr/list",
+            "official_evidence_url": "https://hr.360.cn/hr/",
+            "collector_key": "360_careers",
+        },
+        {
+            "code": "shixiseng",
+            "name": "实习僧",
+            "source_type": "recruitment_platform",
+            "entry_url": "https://www.shixiseng.com/interns/",
+            "official_evidence_url": None,
+            "collector_key": "shixiseng",
+        },
+    )
+    created = 0
     with SessionLocal() as db:
-        if db.scalar(select(Source).where(Source.code == "360-careers")) is not None:
-            return 0
-        db.add(
-            Source(
-                code="360-careers",
-                name="360 招聘",
-                source_type="company_careers",
-                entry_url="https://hr.360.cn/hr/list",
-                official_evidence_url="https://hr.360.cn/hr/",
-                collector_key="360_careers",
-                request_interval_ms=1000,
-                timeout_seconds=15,
-                max_retries=2,
+        for source in sources:
+            if db.scalar(select(Source).where(Source.code == source["code"])) is not None:
+                continue
+            db.add(
+                Source(
+                    **source,
+                    request_interval_ms=1000,
+                    timeout_seconds=15,
+                    max_retries=2,
+                )
             )
-        )
+            created += 1
         db.commit()
-        return 1
+        return created
 
 
 if __name__ == "__main__":

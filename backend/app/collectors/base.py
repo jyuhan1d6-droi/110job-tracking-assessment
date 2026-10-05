@@ -27,6 +27,20 @@ class CapturedResponse:
         return json.loads(self.body)
 
 
+@dataclass(frozen=True)
+class NormalizedJob:
+    external_identity: str
+    title: str
+    company: str
+    city: str
+    requirements: str
+    detail_url: str
+    content_hash: str
+    deadline_raw: str | None = None
+    deadline_at: datetime | None = None
+    recruitment_status: str | None = None
+
+
 class CollectionRequestError(RuntimeError):
     pass
 

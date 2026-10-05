@@ -8,8 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.collectors.base import CapturedResponse, CollectionRequestError, EvidenceHttpClient, write_evidence
-from app.collectors.careers_360 import Careers360Collector, NormalizedJob, parse_detail, parse_list
+from app.collectors.base import CapturedResponse, CollectionRequestError, EvidenceHttpClient, NormalizedJob, write_evidence
+from app.collectors.careers_360 import Careers360Collector, parse_detail, parse_list
 from app.core.config import settings
 from app.models.collection import CollectionArtifact, CollectionRun
 from app.models.job import Job, JobChangeSet, JobFieldChange, JobObservation
@@ -27,8 +27,10 @@ def _save_artifact(
     response: CapturedResponse,
     filename: str,
     artifact_type: str,
+    source_code: str = "360-careers",
+    request_headers: dict[str, str] | None = None,
 ) -> CollectionArtifact:
-    relative = Path("raw") / "360-careers" / str(run.id) / filename
+    relative = Path("raw") / source_code / str(run.id) / filename
     write_evidence(Path(settings.evidence_root), relative, response.body)
     artifact = CollectionArtifact(
         run_id=run.id,
@@ -40,7 +42,7 @@ def _save_artifact(
         byte_size=len(response.body),
         sha256=response.sha256,
         captured_at=response.captured_at,
-        request_headers={
+        request_headers=request_headers or {
             "accept": "application/json",
             "x-requested-with": "XMLHttpRequest",
             "user-agent": Careers360Collector.headers["User-Agent"],
@@ -55,7 +57,12 @@ def _save_artifact(
 
 def _change_hash(job: Job, normalized: NormalizedJob) -> str:
     value = json.dumps(
-        {"job_id": str(job.id), "requirements": normalized.requirements, "deadline": None, "status": None},
+        {
+            "job_id": str(job.id),
+            "requirements": normalized.requirements,
+            "deadline": normalized.deadline_raw,
+            "status": normalized.recruitment_status,
+        },
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -80,6 +87,8 @@ def _ingest_job(
         )
     )
     previous_requirements = job.requirements if job else None
+    previous_deadline = job.deadline_raw if job else None
+    previous_status = job.recruitment_status if job else None
     if job is None:
         job = Job(
             source_id=source.id,
@@ -88,8 +97,11 @@ def _ingest_job(
             company=normalized.company,
             city=normalized.city,
             requirements=normalized.requirements,
-            deadline_provided=False,
-            status_provided=False,
+            deadline_raw=normalized.deadline_raw,
+            deadline_at=normalized.deadline_at,
+            deadline_provided=normalized.deadline_raw is not None,
+            recruitment_status=normalized.recruitment_status,
+            status_provided=normalized.recruitment_status is not None,
             detail_url=normalized.detail_url,
             first_seen_at=observed_at,
             last_seen_at=observed_at,
@@ -108,6 +120,11 @@ def _ingest_job(
         job.company = normalized.company
         job.city = normalized.city
         job.requirements = normalized.requirements
+        job.deadline_raw = normalized.deadline_raw
+        job.deadline_at = normalized.deadline_at
+        job.deadline_provided = normalized.deadline_raw is not None
+        job.recruitment_status = normalized.recruitment_status
+        job.status_provided = normalized.recruitment_status is not None
         job.detail_url = normalized.detail_url
         job.last_seen_at = observed_at
         job.last_live_seen_at = observed_at
@@ -124,8 +141,11 @@ def _ingest_job(
         company=normalized.company,
         city=normalized.city,
         requirements=normalized.requirements,
-        deadline_provided=False,
-        status_provided=False,
+        deadline_raw=normalized.deadline_raw,
+        deadline_at=normalized.deadline_at,
+        deadline_provided=normalized.deadline_raw is not None,
+        recruitment_status=normalized.recruitment_status,
+        status_provided=normalized.recruitment_status is not None,
         detail_url=normalized.detail_url,
         content_hash=normalized.content_hash,
         list_artifact_id=list_artifact.id,
@@ -146,14 +166,33 @@ def _ingest_job(
         )
         db.add(change_set)
         db.flush()
-        db.add(
-            JobFieldChange(
-                change_set_id=change_set.id,
-                field_name="requirements",
-                before_text=previous_requirements,
-                after_text=normalized.requirements,
+        if previous_requirements != normalized.requirements:
+            db.add(
+                JobFieldChange(
+                    change_set_id=change_set.id,
+                    field_name="requirements",
+                    before_text=previous_requirements,
+                    after_text=normalized.requirements,
+                )
             )
-        )
+        if previous_deadline != normalized.deadline_raw:
+            db.add(
+                JobFieldChange(
+                    change_set_id=change_set.id,
+                    field_name="deadline",
+                    before_text=previous_deadline,
+                    after_text=normalized.deadline_raw,
+                )
+            )
+        if previous_status != normalized.recruitment_status:
+            db.add(
+                JobFieldChange(
+                    change_set_id=change_set.id,
+                    field_name="recruitment_status",
+                    before_text=previous_status,
+                    after_text=normalized.recruitment_status,
+                )
+            )
     return result
 
 
