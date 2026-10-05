@@ -11,3 +11,5 @@
 - 只有来源明确给出关闭证据时才记录关闭。
 - 用户资源必须在后端按当前用户 ID 隔离。
 - 回放复用与真实采集相同的比较逻辑，不直接写入预期结果。
+
+当前数据库主模型已实现：`users`、`sources`、`collection_runs`、`collection_artifacts`、`jobs`、`job_observations`、`job_change_sets`、`job_field_changes`。筛选方案、关注区间和关注动态保留为下一阶段设计，尚未建表。
