@@ -5,6 +5,7 @@ import AppLayout from "./components/AppLayout";
 import JobDetailPage from "./pages/JobDetailPage";
 import JobsPage from "./pages/JobsPage";
 import LoginPage from "./pages/LoginPage";
+import WatchesPage from "./pages/WatchesPage";
 
 function RequireAuth() {
   const { user, initializing } = useAuth();
@@ -20,6 +21,7 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/jobs/:jobId" element={<JobDetailPage />} />
+        <Route path="/watches" element={<WatchesPage />} />
       </Route>
     </Route>
     <Route path="*" element={<Navigate to="/jobs" replace />} />

@@ -1,11 +1,12 @@
 import math
 import uuid
 
-from sqlalchemy import distinct, func, or_, select
+from sqlalchemy import distinct, exists, false, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.job import Job
 from app.models.source import Source
+from app.models.watch import JobWatch
 from app.schemas.jobs import (
     AppliedFilters,
     JobDetail,
@@ -29,6 +30,37 @@ def _clean_filter(value: str | None) -> str:
     return (value or "").strip()
 
 
+def build_job_list_item(job: Job, source: Source, is_watched: bool) -> JobListItem:
+    summary = job.requirements[:240]
+    if len(job.requirements) > 240:
+        summary += "…"
+    return JobListItem(
+        id=job.id,
+        title=job.title,
+        company=job.company,
+        city=job.city,
+        requirements_summary=summary,
+        deadline_raw=job.deadline_raw,
+        deadline_provided=job.deadline_provided,
+        recruitment_status=job.recruitment_status,
+        status_provided=job.status_provided,
+        detail_url=job.detail_url,
+        last_seen_at=job.last_seen_at,
+        source=_source_brief(source),
+        is_watched=is_watched,
+    )
+
+
+def _watch_expression(user_id: uuid.UUID | None):
+    if user_id is None:
+        return false()
+    return exists(select(JobWatch.id).where(
+        JobWatch.job_id == Job.id,
+        JobWatch.user_id == user_id,
+        JobWatch.unwatched_at.is_(None),
+    ))
+
+
 def search_jobs(
     db: Session,
     *,
@@ -36,6 +68,7 @@ def search_jobs(
     city: str | None,
     page: int,
     page_size: int,
+    user_id: uuid.UUID | None = None,
 ) -> JobListResponse:
     clean_keyword = _clean_filter(keyword)
     clean_city = _clean_filter(city)
@@ -52,7 +85,7 @@ def search_jobs(
 
     total = db.scalar(select(func.count()).select_from(Job).where(*conditions)) or 0
     rows = db.execute(
-        select(Job, Source)
+        select(Job, Source, _watch_expression(user_id))
         .join(Source, Source.id == Job.source_id)
         .where(*conditions)
         .order_by(Job.last_seen_at.desc(), Job.id.asc())
@@ -60,26 +93,8 @@ def search_jobs(
         .limit(page_size)
     ).all()
     items = []
-    for job, source in rows:
-        summary = job.requirements[:240]
-        if len(job.requirements) > 240:
-            summary += "…"
-        items.append(
-            JobListItem(
-                id=job.id,
-                title=job.title,
-                company=job.company,
-                city=job.city,
-                requirements_summary=summary,
-                deadline_raw=job.deadline_raw,
-                deadline_provided=job.deadline_provided,
-                recruitment_status=job.recruitment_status,
-                status_provided=job.status_provided,
-                detail_url=job.detail_url,
-                last_seen_at=job.last_seen_at,
-                source=_source_brief(source),
-            )
-        )
+    for job, source, is_watched in rows:
+        items.append(build_job_list_item(job, source, is_watched))
     return JobListResponse(
         items=items,
         page=page,
@@ -115,15 +130,15 @@ def job_summary(db: Session) -> JobSummary:
     )
 
 
-def get_job_detail(db: Session, job_id: uuid.UUID) -> JobDetail | None:
+def get_job_detail(db: Session, job_id: uuid.UUID, user_id: uuid.UUID | None = None) -> JobDetail | None:
     row = db.execute(
-        select(Job, Source)
+        select(Job, Source, _watch_expression(user_id))
         .join(Source, Source.id == Job.source_id)
         .where(Job.id == job_id, Job.is_visible.is_(True))
     ).one_or_none()
     if row is None:
         return None
-    job, source = row
+    job, source, is_watched = row
     return JobDetail(
         id=job.id,
         external_identity=job.external_identity,
@@ -141,4 +156,5 @@ def get_job_detail(db: Session, job_id: uuid.UUID) -> JobDetail | None:
         last_seen_at=job.last_seen_at,
         last_changed_at=job.last_changed_at,
         source=_source_brief(source),
+        is_watched=is_watched,
     )

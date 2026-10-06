@@ -25,6 +25,7 @@ export type JobListItem = {
   detail_url: string;
   last_seen_at: string;
   source: SourceBrief;
+  is_watched: boolean;
 };
 
 export type JobDetail = Omit<JobListItem, "requirements_summary"> & {

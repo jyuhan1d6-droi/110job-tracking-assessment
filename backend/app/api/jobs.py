@@ -15,14 +15,14 @@ DbSession = Annotated[Session, Depends(get_db)]
 
 @router.get("", response_model=JobListResponse)
 def jobs(
-    _user: CurrentUser,
+    user: CurrentUser,
     db: DbSession,
     keyword: str | None = Query(default=None, max_length=200),
     city: str | None = Query(default=None, max_length=150),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ) -> JobListResponse:
-    return search_jobs(db, keyword=keyword, city=city, page=page, page_size=page_size)
+    return search_jobs(db, keyword=keyword, city=city, page=page, page_size=page_size, user_id=user.id)
 
 
 @router.get("/cities", response_model=list[str])
@@ -36,8 +36,8 @@ def summary(_user: CurrentUser, db: DbSession) -> JobSummary:
 
 
 @router.get("/{job_id}", response_model=JobDetail)
-def detail(job_id: uuid.UUID, _user: CurrentUser, db: DbSession) -> JobDetail:
-    job = get_job_detail(db, job_id)
+def detail(job_id: uuid.UUID, user: CurrentUser, db: DbSession) -> JobDetail:
+    job = get_job_detail(db, job_id, user.id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="岗位不存在")
     return job

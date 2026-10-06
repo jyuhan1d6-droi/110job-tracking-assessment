@@ -4,6 +4,7 @@ import axios from "axios";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchJob } from "../api/jobs";
 import { displayStatus } from "../components/JobCard";
+import WatchButton from "../components/WatchButton";
 
 export default function JobDetailPage() {
   const { jobId = "" } = useParams();
@@ -31,7 +32,7 @@ export default function JobDetailPage() {
           <Descriptions.Item label="来源类型">{job.source.source_type === "company_careers" ? "公司官方招聘" : "招聘平台"}</Descriptions.Item>
         </Descriptions>
         <div><Typography.Title level={3}>岗位要求</Typography.Title><Typography.Paragraph className="requirements-full">{job.requirements}</Typography.Paragraph></div>
-        <Button type="primary" href={job.detail_url} target="_blank" rel="noopener noreferrer">查看原岗位</Button>
+        <Space><Button type="primary" href={job.detail_url} target="_blank" rel="noopener noreferrer">查看原岗位</Button><WatchButton jobId={job.id} isWatched={job.is_watched} /></Space>
       </Space>
     </Card>
   </Space>;

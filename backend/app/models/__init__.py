@@ -3,6 +3,7 @@ from app.models.job import Job, JobChangeSet, JobFieldChange, JobObservation
 from app.models.saved_filter import SavedFilter
 from app.models.source import Source
 from app.models.user import AuthSession, User
+from app.models.watch import JobWatch
 
 __all__ = [
     "CollectionArtifact",
@@ -15,4 +16,5 @@ __all__ = [
     "Source",
     "AuthSession",
     "User",
+    "JobWatch",
 ]

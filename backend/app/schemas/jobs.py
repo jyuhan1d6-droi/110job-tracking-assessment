@@ -24,6 +24,7 @@ class JobListItem(BaseModel):
     detail_url: str
     last_seen_at: datetime
     source: SourceBrief
+    is_watched: bool
 
 
 class JobDetail(BaseModel):
@@ -43,6 +44,7 @@ class JobDetail(BaseModel):
     last_seen_at: datetime
     last_changed_at: datetime | None
     source: SourceBrief
+    is_watched: bool
 
 
 class AppliedFilters(BaseModel):

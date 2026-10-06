@@ -1,6 +1,7 @@
 import { Button, Card, Descriptions, Space, Tag, Typography } from "antd";
 import { Link, useLocation } from "react-router-dom";
 import type { JobListItem } from "../types/jobs";
+import WatchButton from "./WatchButton";
 
 export function displayStatus(job: Pick<JobListItem, "status_provided" | "recruitment_status">) {
   if (!job.status_provided) return "未提供";
@@ -23,6 +24,7 @@ export default function JobCard({ job }: { job: JobListItem }) {
       <Space>
         <Link to={`/jobs/${job.id}`} state={{ from: `${location.pathname}${location.search}` }}><Button type="primary">查看详情</Button></Link>
         <Button href={job.detail_url} target="_blank" rel="noopener noreferrer">原岗位</Button>
+        <WatchButton jobId={job.id} isWatched={job.is_watched} />
       </Space>
     </Space>
   </Card>;
