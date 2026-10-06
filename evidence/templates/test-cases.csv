@@ -1,4 +1,4 @@
-﻿case_id,前置条件,操作,预期结果,实际结果,证据位置
+case_id,前置条件,操作,预期结果,实际结果,证据位置
 JOB-01,真实两类来源,各抓取至少10条并复核详情,实际来源可核对；无重复岗位,通过：最终live run实习僧10条、360招聘25条；各自identity与详情链接均唯一，39个原始文件大小和SHA-256复核一致,evidence/reports/final-live-collection-validation.md; evidence/reports/final-live-artifacts.csv
 JOB-02,已有初始快照,重复采集完全相同内容,不新增岗位和变化动态,通过：重复内容计为unchanged且没有change set或watch event,backend/tests/test_acceptance_scenarios.py
 JOB-03,同名不同identity岗位,采集并搜索,分别保留；不按名称合并,通过：同名不同identity保留为两条岗位,backend/tests/test_acceptance_scenarios.py

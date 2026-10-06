@@ -4,7 +4,7 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $repositoryRoot "FINAL_SHA256SUMS"
 $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
 
-$paths = git -C $repositoryRoot ls-files --cached --others --exclude-standard |
+$paths = git -C $repositoryRoot ls-files --cached |
     Where-Object { $_ -ne "FINAL_SHA256SUMS" } |
     Sort-Object
 
@@ -16,5 +16,9 @@ $lines = foreach ($relativePath in $paths) {
     }
 }
 
-[System.IO.File]::WriteAllLines($manifestPath, $lines, $utf8WithoutBom)
+[System.IO.File]::WriteAllText(
+    $manifestPath,
+    (($lines -join "`n") + "`n"),
+    $utf8WithoutBom
+)
 Write-Output "Wrote $($lines.Count) entries to $manifestPath"
