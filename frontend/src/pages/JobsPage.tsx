@@ -6,6 +6,7 @@ import { fetchCities, fetchJobs, fetchJobSummary } from "../api/jobs";
 import { useAuth } from "../auth/AuthContext";
 import EmptyJobsGuide from "../components/EmptyJobsGuide";
 import JobCard from "../components/JobCard";
+import SavedFiltersPanel, { buildSavedFilterParams } from "../components/SavedFiltersPanel";
 
 type SearchValues = { keyword?: string; city?: string };
 
@@ -21,6 +22,7 @@ export default function JobsPage() {
   const keyword = params.get("keyword") ?? "";
   const city = params.get("city") ?? "";
   const page = Math.max(1, Number(params.get("page") || 1) || 1);
+  const activeSavedFilter = params.get("savedFilter") ?? "";
   const [form] = Form.useForm<SearchValues>();
   useEffect(() => { form.setFieldsValue({ keyword, city: city || undefined }); }, [form, keyword, city]);
 
@@ -53,6 +55,18 @@ export default function JobsPage() {
       </Form>
       {cities.isError && <Alert className="inline-alert" type="warning" message="城市选项暂时不可用，仍可使用关键词搜索。" />}
     </Card>
+
+    <SavedFiltersPanel
+      keyword={keyword}
+      city={city}
+      activeId={activeSavedFilter}
+      onUse={filter => setParams(buildSavedFilterParams(filter))}
+      onDeletedActive={() => {
+        const next = new URLSearchParams(params);
+        next.delete("savedFilter");
+        setParams(next);
+      }}
+    />
 
     {(jobs.isError || summary.isError) && <Alert type="error" showIcon message="加载岗位失败" description="请检查服务状态后重试。" action={<Button onClick={() => { jobs.refetch(); summary.refetch(); }}>重试</Button>} />}
     {(jobs.isLoading || summary.isLoading) && <Card><Skeleton active paragraph={{ rows: 6 }} /></Card>}
