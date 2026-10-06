@@ -107,7 +107,7 @@ docker compose ps
 
 ## 当前状态
 
-- 已建立前端、后端、数据库和反向代理骨架。
+- 已完成前端、后端、PostgreSQL 数据库与 Nginx 同源反向代理集成。
 - 已提供后端应用及数据库健康检查。
 - 已建立 Alembic，容器启动时自动执行迁移；当前主模型包含用户、来源、采集运行、证据索引、岗位、岗位观察和两级变更记录。
 - 已建立完整的证据目录约定并纳入附件模板。
@@ -121,6 +121,10 @@ docker compose ps
 - 已完成关注动态生成、动态列表和字段变更详情；只对关注区间内新发生的变化建立动态，不补发历史变化。
 - 已完成基于真实采集证据的本地回放入口，清单按附件 `replay.schema.json` 校验，支持字段变化、重复回放、明确关闭和来源级失败。
 - 最终真实采集：实习僧有效 10 条、360 招聘有效 25 条；39 个最终原始文件的大小与 SHA-256 已逐项复核。
+
+## 开源依赖与自行实现范围
+
+项目使用 React、Ant Design、TanStack Query、Axios 和 Vite 构建前端，使用 FastAPI、SQLAlchemy、Alembic、psycopg、httpx、Beautiful Soup、Tenacity、Argon2 与 JSON Schema 构建后端，并使用 PostgreSQL 和 Nginx 完成持久化与同源部署。业务数据模型、权限隔离、两个真实来源采集器、证据保存、岗位去重与变更比较、筛选方案、关注时间窗口、关注动态、回放链路及验收测试均为本项目自行实现；未使用手工静态岗位数据替代真实采集。
 
 ## 岗位浏览
 
@@ -178,7 +182,7 @@ docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-
 - Docker 部署：`frontend/Dockerfile`、`backend/Dockerfile`、`compose.yaml`、`.env.example`
 - 数据库迁移与初始化：`backend/alembic/`、容器启动脚本及三个预置账号
 - 来源与架构说明：`docs/sources.md`、`docs/architecture.md`
-- 两次最终真实采集：`evidence/templates/collection-runs.csv`
+- 真实采集运行记录（每个 live run 一行）：`evidence/templates/collection-runs.csv`
 - 两类来源证据：`evidence/templates/source-evidence.csv`
 - JOB-01 至 JOB-09：`evidence/templates/test-cases.csv`
 - 最终原始证据明细：`evidence/reports/final-live-artifacts.csv`

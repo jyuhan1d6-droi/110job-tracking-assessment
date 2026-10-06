@@ -32,7 +32,7 @@
 
 填写完成后重新运行隔离 PostgreSQL 验收套件：42 项全部通过，1 条第三方依赖弃用警告，无失败。
 
-- `collection-runs.csv`：正式填写 2 行，分别对应上述最终 live run；运行统计与数据库一致。
+- `collection-runs.csv`：按附件口径填写正式数据库中全部 9 次 live run，每次运行一行，不包含 replay；本报告上述表格仅聚焦最终验收使用的两次 live run。运行统计均来自现有数据库与 artifact 元数据。
 - `source-evidence.csv`：正式填写 2 行；每个来源至少 3 个样例详情链接，并关联最终列表原始文件及 SHA-256。
 - `test-cases.csv`：JOB-01 更新为最终 live 数据和本报告；JOB-02 至 JOB-09 的断言仍与最终数据库行为一致，不把本次实习僧新增 2 条误写成“完全相同的重复采集”。
 
