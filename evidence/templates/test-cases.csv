@@ -1,10 +1,10 @@
 ﻿case_id,前置条件,操作,预期结果,实际结果,证据位置
-JOB-01,真实两类来源,各抓取至少10条并复核详情,实际来源可核对；无重复岗位,,
-JOB-02,已有初始快照,重复采集完全相同内容,不新增岗位和变化动态,,
-JOB-03,同名不同identity岗位,采集并搜索,分别保留；不按名称合并,,
-JOB-04,A关注；B未关注,修改要求、截止时间、明确关闭状态,前后值和时间可追溯；只给关注者新增动态,,
-JOB-05,A未关注时已有变化,A关注后再产生新变化,仅显示关注后的变化,,
-JOB-06,A取消关注,再次修改岗位,不新增A的动态；旧动态可保留,,
-JOB-07,原岗位在库,列表缺失 / 超时 / 解析失败各测一次,原数据保留；不得误关闭；另一来源可成功,,
-JOB-08,已有方案和关注,以B直接请求A的数据并尝试修改,后端拒绝；A数据不变,,
-JOB-09,保存筛选方案,修改关键词或城市后保存再使用,多个条件AND；反映当前数据；删除生效,,
+JOB-01,真实两类来源,各抓取至少10条并复核详情,实际来源可核对；无重复岗位,通过：两类已提交真实原始证据均解析出至少10条有效且identity唯一的岗位,evidence/reports/automated/step13-acceptance-validation.md
+JOB-02,已有初始快照,重复采集完全相同内容,不新增岗位和变化动态,通过：重复内容计为unchanged且没有change set或watch event,backend/tests/test_acceptance_scenarios.py
+JOB-03,同名不同identity岗位,采集并搜索,分别保留；不按名称合并,通过：同名不同identity保留为两条岗位,backend/tests/test_acceptance_scenarios.py
+JOB-04,A关注；B未关注,修改要求、截止时间、明确关闭状态,前后值和时间可追溯；只给关注者新增动态,通过：一个change set包含实际变化字段且只为覆盖变化时间的关注窗口建动态,backend/tests/test_change_tracking.py
+JOB-05,A未关注时已有变化,A关注后再产生新变化,仅显示关注后的变化,通过：关注前变化未补发；关注后变化可见,backend/tests/test_change_tracking.py
+JOB-06,A取消关注,再次修改岗位,不新增A的动态；旧动态可保留,通过：取消期间无新动态；旧动态保留；重新关注后新变化可见,backend/tests/test_change_tracking.py
+JOB-07,原岗位在库,列表缺失 / 超时 / 解析失败各测一次,原数据保留；不得误关闭；另一来源可成功,通过：受控超时与既有空列表/解析失败测试均保留岗位且不误关闭；另一来源独立入库成功,evidence/reports/automated/step13-acceptance-validation.md
+JOB-08,已有方案和关注,以B直接请求A的数据并尝试修改,后端拒绝；A数据不变,通过：筛选方案跨用户操作404；关注和动态按user_id隔离；普通用户维护接口403,backend/tests/test_saved_filters.py; backend/tests/test_watches.py; backend/tests/test_collection_admin.py
+JOB-09,保存筛选方案,修改关键词或城市后保存再使用,多个条件AND；反映当前数据；删除生效,通过：岗位集合刷新后相同方案重新计算结果；修改删除与重新登录持久化均通过,backend/tests/test_acceptance_scenarios.py; backend/tests/test_saved_filters.py

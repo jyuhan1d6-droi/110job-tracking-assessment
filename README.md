@@ -98,6 +98,16 @@ docker-compose up --build --force-recreate
 
 数据维护账号可访问 <http://localhost:8080/maintenance/collection>，选择实习僧或 360 招聘执行真实采集。页面会显示当前状态、运行统计、失败原因、历史记录及原始证据元数据，并可按证据 ID 安全下载文件。采集超时、重试次数和请求间隔来自数据库 `sources` 配置；`.env.example` 不再提供无效的同名环境变量。
 
+## 隔离自动化测试
+
+后端验收测试必须使用独立的临时 PostgreSQL 和 evidence tmpfs，禁止直接对正式数据库执行 `pytest`：
+
+```bash
+docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test
+```
+
+测试容器要求 `APP_ENV=test`、数据库名以 `_test` 结尾，并将项目 `evidence/` 只读挂载为真实证据来源；测试产生的文件仅写入 `/test-evidence`。JOB-01 至 JOB-09 的结果见 `evidence/templates/test-cases.csv` 和 `evidence/reports/automated/step13-acceptance-validation.md`。
+
 ## 筛选方案
 
 在岗位页执行搜索后，点击“保存当前条件”，输入名称即可收藏当前关键词和城市。方案支持使用、编辑和删除；点击“使用”会用数据库中的最新岗位重新计算结果，不保存或复用旧的岗位列表。方案属于当前账号，其他普通账号和维护账号均不能读取或修改。

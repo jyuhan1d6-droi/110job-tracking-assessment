@@ -19,7 +19,7 @@ def test_saved_filters_require_login():
         assert client.post("/api/saved-filters", json={"name": "x", "keyword": "x"}).status_code == 401
 
 
-def test_saved_filter_crud_validation_and_three_account_isolation():
+def test_job_08_saved_filter_crud_validation_and_three_account_isolation():
     marker = uuid.uuid4().hex
     name = f"隔离验证-{marker}"
     clients = [

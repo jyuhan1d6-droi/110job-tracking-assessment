@@ -1,0 +1,36 @@
+name: job-tracker-isolated-tests
+
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: job_tracker_test
+      POSTGRES_USER: job_tracker_test
+      POSTGRES_PASSWORD: test-only-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U job_tracker_test -d job_tracker_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  backend-test:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://job_tracker_test:test-only-password@postgres-test:5432/job_tracker_test
+      EVIDENCE_ROOT: /test-evidence
+      SOURCE_EVIDENCE_ROOT: /source-evidence
+      SEED_JOBSEEKER1_PASSWORD: exam-jobseeker1
+      SEED_JOBSEEKER2_PASSWORD: exam-jobseeker2
+      SEED_MAINTAINER_PASSWORD: exam-maintainer
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    volumes:
+      - ./evidence:/source-evidence:ro
+    tmpfs:
+      - /test-evidence
+    command: ["sh", "-c", "cp -R /source-evidence/. /test-evidence/ && alembic upgrade head && python -m app.initial_data && pytest -q --junitxml=/tmp/job-tracker-junit.xml"]

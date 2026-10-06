@@ -32,7 +32,7 @@ def normalized(*, requirements: str, deadline: str | None, status: str | None = 
     )
 
 
-def test_tracked_field_changes_a_b_a_and_explicit_close_are_persisted():
+def test_job_04_05_06_watch_change_boundaries_cancel_and_refollow_are_persisted():
     connection = engine.connect()
     transaction = connection.begin()
     db = Session(bind=connection, autoflush=True, expire_on_commit=False)
