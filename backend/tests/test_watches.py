@@ -22,9 +22,12 @@ def _client(username: str, password: str) -> TestClient:
 def test_watch_requires_login_and_missing_job_is_not_watchable():
     with TestClient(app) as client:
         assert client.get("/api/watches").status_code == 401
+        assert client.get("/api/watch-events").status_code == 401
+        assert client.get(f"/api/watch-events/{uuid.uuid4()}").status_code == 401
         assert client.post(f"/api/jobs/{uuid.uuid4()}/watch").status_code == 401
     with _client("jobseeker1", settings.seed_jobseeker1_password) as client:
         assert client.post(f"/api/jobs/{uuid.uuid4()}/watch").status_code == 404
+        assert client.get(f"/api/watch-events/{uuid.uuid4()}").status_code == 404
 
 
 def test_three_account_watch_isolation_idempotency_and_refollow():

@@ -6,6 +6,8 @@ import JobDetailPage from "./pages/JobDetailPage";
 import JobsPage from "./pages/JobsPage";
 import LoginPage from "./pages/LoginPage";
 import WatchesPage from "./pages/WatchesPage";
+import WatchEventsPage from "./pages/WatchEventsPage";
+import WatchEventDetailPage from "./pages/WatchEventDetailPage";
 
 function RequireAuth() {
   const { user, initializing } = useAuth();
@@ -22,6 +24,8 @@ export default function App() {
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/jobs/:jobId" element={<JobDetailPage />} />
         <Route path="/watches" element={<WatchesPage />} />
+        <Route path="/watch-events" element={<WatchEventsPage />} />
+        <Route path="/watch-events/:eventId" element={<WatchEventDetailPage />} />
       </Route>
     </Route>
     <Route path="*" element={<Navigate to="/jobs" replace />} />

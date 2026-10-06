@@ -3,7 +3,7 @@ from app.models.job import Job, JobChangeSet, JobFieldChange, JobObservation
 from app.models.saved_filter import SavedFilter
 from app.models.source import Source
 from app.models.user import AuthSession, User
-from app.models.watch import JobWatch
+from app.models.watch import JobWatch, WatchEvent
 
 __all__ = [
     "CollectionArtifact",
@@ -17,4 +17,5 @@ __all__ = [
     "AuthSession",
     "User",
     "JobWatch",
+    "WatchEvent",
 ]

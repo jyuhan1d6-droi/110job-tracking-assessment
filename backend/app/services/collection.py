@@ -22,6 +22,7 @@ from app.core.config import settings
 from app.models.collection import CollectionArtifact, CollectionRun
 from app.models.job import Job, JobChangeSet, JobFieldChange, JobObservation
 from app.models.source import Source
+from app.services.watch_events import create_watch_events_for_change_set
 
 
 class CollectionConflictError(RuntimeError):
@@ -205,6 +206,7 @@ def _ingest_job(
             observation_id=observation.id,
             change_hash=_change_hash(job, normalized),
             origin="live",
+            detected_at=observed_at,
         )
         db.add(change_set)
         db.flush()
@@ -217,6 +219,8 @@ def _ingest_job(
                     after_text=after_text,
                 )
             )
+        db.flush()
+        create_watch_events_for_change_set(db, change_set)
     return result
 
 

@@ -66,6 +66,10 @@ body {
 .job-card-heading h3 { margin: 0 0 4px; }
 .requirements-summary { white-space: pre-wrap; color: #425d57; }
 .requirements-full { white-space: pre-wrap; font-size: 15px; line-height: 1.8; }
+.detail-actions { margin-top: 20px; }
+.change-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.change-comparison > div { min-width: 0; padding: 16px; border-radius: 8px; background: #f6f8f7; }
+.change-value { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .empty-panel {
   padding: 56px 24px;
@@ -97,4 +101,5 @@ body {
   .header-user, .header-link { display: none; }
   .job-card-heading { flex-direction: column; }
   .page-content { padding-top: 24px; }
+  .change-comparison { grid-template-columns: 1fr; }
 }

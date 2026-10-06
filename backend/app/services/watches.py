@@ -21,6 +21,18 @@ def active_watch(db: Session, user_id: uuid.UUID, job_id: uuid.UUID) -> JobWatch
     ))
 
 
+def _lock_active_watch(db: Session, user_id: uuid.UUID, job_id: uuid.UUID) -> JobWatch | None:
+    return db.scalar(
+        select(JobWatch)
+        .where(
+            JobWatch.user_id == user_id,
+            JobWatch.job_id == job_id,
+            JobWatch.unwatched_at.is_(None),
+        )
+        .with_for_update()
+    )
+
+
 def watch_job(db: Session, user_id: uuid.UUID, job_id: uuid.UUID) -> WatchResponse | None:
     job_exists = db.scalar(select(Job.id).where(Job.id == job_id, Job.is_visible.is_(True)))
     if job_exists is None:
@@ -41,7 +53,7 @@ def watch_job(db: Session, user_id: uuid.UUID, job_id: uuid.UUID) -> WatchRespon
 
 
 def unwatch_job(db: Session, user_id: uuid.UUID, job_id: uuid.UUID) -> None:
-    current = active_watch(db, user_id, job_id)
+    current = _lock_active_watch(db, user_id, job_id)
     if current is not None:
         current.unwatched_at = datetime.now(timezone.utc)
         db.commit()

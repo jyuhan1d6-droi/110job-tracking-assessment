@@ -16,7 +16,7 @@ export default function AppLayout() {
 
   return <Layout className="app-shell">
     <Header className="app-header">
-      <Space size="large"><Link className="brand" to="/jobs">岗位搜索与变更追踪</Link><Link className="header-link" to="/jobs">岗位</Link><Link className="header-link" to="/watches">我的关注</Link></Space>
+      <Space size="large"><Link className="brand" to="/jobs">岗位搜索与变更追踪</Link><Link className="header-link" to="/jobs">岗位</Link><Link className="header-link" to="/watches">我的关注</Link><Link className="header-link" to="/watch-events">关注动态</Link></Space>
       <Space>
         <Tag color={user?.role === "maintainer" ? "gold" : "green"}>{user?.role === "maintainer" ? "数据维护账号" : "求职者"}</Tag>
         <Text className="header-user">{user?.display_name}</Text>
