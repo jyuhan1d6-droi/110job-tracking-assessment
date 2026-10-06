@@ -108,7 +108,15 @@ def test_tracked_field_changes_a_b_a_and_explicit_close_are_persisted():
         second_watch = JobWatch(user_id=second_user.id, job_id=job.id, watched_at=start + timedelta(seconds=30))
         db.add_all([first_watch, second_watch])
         db.flush()
-        assert db.scalar(select(func.count()).select_from(WatchEvent)) == 0
+
+        def event_count(*watches):
+            return db.scalar(
+                select(func.count()).select_from(WatchEvent).where(
+                    WatchEvent.watch_id.in_([watch.id for watch in watches])
+                )
+            )
+
+        assert event_count(first_watch, second_watch) == 0
 
         state_b = normalized(requirements="要求 B", deadline="2027-01-01", status="open")
         run2, list2, detail2 = make_run_and_artifacts(2, changed=1)
@@ -119,7 +127,7 @@ def test_tracked_field_changes_a_b_a_and_explicit_close_are_persisted():
         change2 = db.scalar(select(JobChangeSet).where(JobChangeSet.run_id == run2.id))
         fields2 = set(db.scalars(select(JobFieldChange.field_name).where(JobFieldChange.change_set_id == change2.id)))
         assert fields2 == {"requirements", "deadline", "recruitment_status"}
-        assert db.scalar(select(func.count()).select_from(WatchEvent)) == 2
+        assert event_count(first_watch, second_watch) == 2
         assert create_watch_events_for_change_set(db, change2) == 0
         first_event = db.scalar(select(WatchEvent).where(WatchEvent.watch_id == first_watch.id))
         detail = get_watch_event(db, user.id, first_event.id)
@@ -135,8 +143,10 @@ def test_tracked_field_changes_a_b_a_and_explicit_close_are_persisted():
             db, run=run3, source=source, normalized=state_a,
             list_artifact=list3, detail_artifact=detail3, observed_at=start + timedelta(minutes=2),
         ) == "changed"
-        assert db.scalar(select(func.count()).select_from(JobChangeSet)) == 2
-        assert db.scalar(select(func.count()).select_from(WatchEvent)) == 3
+        assert db.scalar(
+            select(func.count()).select_from(JobChangeSet).where(JobChangeSet.job_id == job.id)
+        ) == 2
+        assert event_count(first_watch, second_watch) == 3
 
         refollow = JobWatch(user_id=user.id, job_id=job.id, watched_at=start + timedelta(minutes=2, seconds=30))
         db.add(refollow)
@@ -160,7 +170,7 @@ def test_tracked_field_changes_a_b_a_and_explicit_close_are_persisted():
             )
         )
         assert close_fields == {"recruitment_status"}
-        assert db.scalar(select(func.count()).select_from(WatchEvent)) == 5
+        assert event_count(first_watch, second_watch, refollow) == 5
         assert list_watch_events(db, user.id, 1, 20).total == 2
         assert list_watch_events(db, second_user.id, 1, 20).total == 3
 

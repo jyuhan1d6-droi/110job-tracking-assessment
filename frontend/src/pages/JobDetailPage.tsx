@@ -22,12 +22,14 @@ export default function JobDetailPage() {
     <Link to={backTo}>← 返回岗位列表</Link>
     <Card>
       <Space direction="vertical" size="middle" className="full-width">
-        <div><Space wrap><Tag color="blue">{job.city}</Tag><Tag>{job.source.name}</Tag><Tag color={job.recruitment_status === "closed" ? "red" : "default"}>{displayStatus(job)}</Tag></Space><Typography.Title>{job.title}</Typography.Title><Typography.Title level={4} type="secondary">{job.company}</Typography.Title></div>
+        <div><Space wrap><Tag color="blue">{job.city}</Tag><Tag>{job.source.name}</Tag>{job.last_update_mode === "replay" && <Tag color="purple">本地回放数据</Tag>}<Tag color={job.recruitment_status === "closed" ? "red" : "default"}>{displayStatus(job)}</Tag></Space><Typography.Title>{job.title}</Typography.Title><Typography.Title level={4} type="secondary">{job.company}</Typography.Title></div>
         <Descriptions bordered column={{ xs: 1, md: 2 }}>
           <Descriptions.Item label="截止时间">{job.deadline_provided ? job.deadline_raw : "未提供"}</Descriptions.Item>
           <Descriptions.Item label="招聘状态">{displayStatus(job)}</Descriptions.Item>
           <Descriptions.Item label="首次抓取">{new Date(job.first_seen_at).toLocaleString("zh-CN")}</Descriptions.Item>
           <Descriptions.Item label="最近抓取">{new Date(job.last_seen_at).toLocaleString("zh-CN")}</Descriptions.Item>
+          <Descriptions.Item label="最近真实采集">{job.last_live_seen_at ? new Date(job.last_live_seen_at).toLocaleString("zh-CN") : "暂无"}</Descriptions.Item>
+          <Descriptions.Item label="当前数据来源">{job.last_update_mode === "replay" ? "本地回放" : "真实采集"}</Descriptions.Item>
           <Descriptions.Item label="最近变化">{job.last_changed_at ? new Date(job.last_changed_at).toLocaleString("zh-CN") : "暂无"}</Descriptions.Item>
           <Descriptions.Item label="来源类型">{job.source.source_type === "company_careers" ? "公司官方招聘" : "招聘平台"}</Descriptions.Item>
         </Descriptions>

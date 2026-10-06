@@ -5,6 +5,7 @@ from sqlalchemy import distinct, exists, false, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.job import Job
+from app.models.collection import CollectionRun
 from app.models.source import Source
 from app.models.watch import JobWatch
 from app.schemas.jobs import (
@@ -30,7 +31,7 @@ def _clean_filter(value: str | None) -> str:
     return (value or "").strip()
 
 
-def build_job_list_item(job: Job, source: Source, is_watched: bool) -> JobListItem:
+def build_job_list_item(job: Job, source: Source, is_watched: bool, last_update_mode: str = "live") -> JobListItem:
     summary = job.requirements[:240]
     if len(job.requirements) > 240:
         summary += "…"
@@ -46,6 +47,8 @@ def build_job_list_item(job: Job, source: Source, is_watched: bool) -> JobListIt
         status_provided=job.status_provided,
         detail_url=job.detail_url,
         last_seen_at=job.last_seen_at,
+        last_live_seen_at=job.last_live_seen_at,
+        last_update_mode=last_update_mode,
         source=_source_brief(source),
         is_watched=is_watched,
     )
@@ -85,16 +88,17 @@ def search_jobs(
 
     total = db.scalar(select(func.count()).select_from(Job).where(*conditions)) or 0
     rows = db.execute(
-        select(Job, Source, _watch_expression(user_id))
+        select(Job, Source, _watch_expression(user_id), CollectionRun.mode)
         .join(Source, Source.id == Job.source_id)
+        .join(CollectionRun, CollectionRun.id == Job.updated_by_run_id)
         .where(*conditions)
         .order_by(Job.last_seen_at.desc(), Job.id.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     ).all()
     items = []
-    for job, source, is_watched in rows:
-        items.append(build_job_list_item(job, source, is_watched))
+    for job, source, is_watched, mode in rows:
+        items.append(build_job_list_item(job, source, is_watched, mode))
     return JobListResponse(
         items=items,
         page=page,
@@ -132,13 +136,14 @@ def job_summary(db: Session) -> JobSummary:
 
 def get_job_detail(db: Session, job_id: uuid.UUID, user_id: uuid.UUID | None = None) -> JobDetail | None:
     row = db.execute(
-        select(Job, Source, _watch_expression(user_id))
+        select(Job, Source, _watch_expression(user_id), CollectionRun.mode)
         .join(Source, Source.id == Job.source_id)
+        .join(CollectionRun, CollectionRun.id == Job.updated_by_run_id)
         .where(Job.id == job_id, Job.is_visible.is_(True))
     ).one_or_none()
     if row is None:
         return None
-    job, source, is_watched = row
+    job, source, is_watched, mode = row
     return JobDetail(
         id=job.id,
         external_identity=job.external_identity,
@@ -154,6 +159,8 @@ def get_job_detail(db: Session, job_id: uuid.UUID, user_id: uuid.UUID | None = N
         detail_url=job.detail_url,
         first_seen_at=job.first_seen_at,
         last_seen_at=job.last_seen_at,
+        last_live_seen_at=job.last_live_seen_at,
+        last_update_mode=mode,
         last_changed_at=job.last_changed_at,
         source=_source_brief(source),
         is_watched=is_watched,

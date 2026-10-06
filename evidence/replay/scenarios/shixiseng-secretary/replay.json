@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "mode": "replay",
+  "provenance": {
+    "sourceId": "shixiseng",
+    "sourceUrl": "https://www.shixiseng.com/intern/inn_9g4ply6sfzje",
+    "collectedAt": "2026-10-05T17:27:50.265197+00:00",
+    "snapshotFile": "raw/shixiseng/fb11537c-bed7-422b-bf91-059b3b287c0b/detail-inn_9g4ply6sfzje.html",
+    "sha256": "6caadf4d9d5d687bee016907eda428460c8d7cfb24ca94bf314fd86268218723"
+  },
+  "steps": [
+    {
+      "stepId": "baseline",
+      "kind": "snapshot",
+      "snapshotFile": "replay/scenarios/shixiseng-secretary/baseline.snapshot.json",
+      "sha256": "569ea4a88ba6eb66b3ed0b0f425ac48b8c38db280df2631675963fa2e5d3e52a",
+      "changes": [],
+      "expected": "基于真实快照的规范化基线；与当前岗位相同时不产生变化或关注动态。"
+    },
+    {
+      "stepId": "requirements-change",
+      "kind": "snapshot",
+      "snapshotFile": "replay/scenarios/shixiseng-secretary/requirements-change.snapshot.json",
+      "sha256": "4fd031414ef66a060a93336fd1f9324db14a23726b7811dcab5069f005ff8e6f",
+      "changes": [
+        {
+          "identity": "shixiseng:inn_9g4ply6sfzje",
+          "field": "requirements",
+          "before": "原始岗位要求，完整内容见 baseline.snapshot.json",
+          "after": "在原始岗位要求前增加明确的本地回放职责说明，完整内容见 requirements-change.snapshot.json"
+        }
+      ],
+      "expected": "应用解析快照并自行比较，产生 requirements 变化；重复执行相同快照不新增变化。"
+    },
+    {
+      "stepId": "explicit-close",
+      "kind": "snapshot",
+      "snapshotFile": "replay/scenarios/shixiseng-secretary/explicit-close.snapshot.json",
+      "sha256": "88bacb9b1f5d0c84f905f3cefd51436bd4b2cab842686abe272f394b8161ecb1",
+      "changes": [
+        {
+          "identity": "shixiseng:inn_9g4ply6sfzje",
+          "field": "status",
+          "before": null,
+          "after": "closed"
+        }
+      ],
+      "expected": "应用从快照读取 closed 和 explicitClosedEvidence，自行比较后产生明确关闭变化。"
+    },
+    {
+      "stepId": "source-failure",
+      "kind": "source_failure",
+      "failureReason": "本地回放：模拟实习僧来源请求超时",
+      "changes": [],
+      "expected": "来源级运行失败，保留已有岗位，不产生岗位变化或关注动态，failed_count 为 0。"
+    }
+  ]
+}

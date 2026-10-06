@@ -7,6 +7,7 @@ from app.api.jobs import router as jobs_router
 from app.api.saved_filters import router as saved_filters_router
 from app.api.watches import router as watches_router
 from app.api.watch_events import router as watch_events_router
+from app.api.replay import router as replay_router
 from app.core.config import settings
 
 app = FastAPI(
@@ -22,3 +23,4 @@ app.include_router(jobs_router, prefix="/api")
 app.include_router(saved_filters_router, prefix="/api")
 app.include_router(watches_router, prefix="/api")
 app.include_router(watch_events_router, prefix="/api")
+app.include_router(replay_router, prefix="/api")

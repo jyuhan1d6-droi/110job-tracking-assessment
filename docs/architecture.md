@@ -13,3 +13,5 @@
 - 回放复用与真实采集相同的比较逻辑，不直接写入预期结果。
 
 当前数据库主模型已实现：`users`、`sources`、`collection_runs`、`collection_artifacts`、`jobs`、`job_observations`、`job_change_sets`、`job_field_changes`、`saved_filters`、`job_watches`、`watch_events`。动态关联具体关注区间与变化集合，用户不做物理删除。
+
+回放不新增业务表，使用 `collection_runs.mode=replay` 与 `job_change_sets.origin=replay` 复用采集、变化和动态链路。清单按附件 JSON Schema 校验，快照必须引用可核验的真实原始证据；回放不更新 `jobs.last_live_seen_at`。

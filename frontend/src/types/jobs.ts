@@ -24,6 +24,8 @@ export type JobListItem = {
   status_provided: boolean;
   detail_url: string;
   last_seen_at: string;
+  last_live_seen_at: string | null;
+  last_update_mode: "live" | "replay";
   source: SourceBrief;
   is_watched: boolean;
 };

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.job import Job
+from app.models.collection import CollectionRun
 from app.models.source import Source
 from app.models.watch import JobWatch
 from app.schemas.watches import WatchedJobItem, WatchListResponse, WatchResponse
@@ -69,9 +70,10 @@ def list_watched_jobs(db: Session, user_id: uuid.UUID, page: int, page_size: int
         select(func.count()).select_from(JobWatch).join(Job, Job.id == JobWatch.job_id).where(*conditions)
     ) or 0
     rows = db.execute(
-        select(JobWatch, Job, Source)
+        select(JobWatch, Job, Source, CollectionRun.mode)
         .join(Job, Job.id == JobWatch.job_id)
         .join(Source, Source.id == Job.source_id)
+        .join(CollectionRun, CollectionRun.id == Job.updated_by_run_id)
         .where(*conditions)
         .order_by(JobWatch.watched_at.desc(), JobWatch.id.asc())
         .offset((page - 1) * page_size)
@@ -81,8 +83,8 @@ def list_watched_jobs(db: Session, user_id: uuid.UUID, page: int, page_size: int
         items=[WatchedJobItem(
             watch_id=watch.id,
             watched_at=watch.watched_at,
-            job=build_job_list_item(job, source, True),
-        ) for watch, job, source in rows],
+            job=build_job_list_item(job, source, True, mode),
+        ) for watch, job, source, mode in rows],
         page=page,
         page_size=page_size,
         total=total,

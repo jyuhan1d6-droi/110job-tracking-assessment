@@ -14,7 +14,7 @@ export default function JobCard({ job }: { job: JobListItem }) {
     <Space direction="vertical" size="middle" className="full-width">
       <div className="job-card-heading">
         <div><Typography.Title level={3}>{job.title}</Typography.Title><Typography.Text type="secondary">{job.company}</Typography.Text></div>
-        <Space wrap><Tag color="blue">{job.city}</Tag><Tag>{job.source.name}</Tag><Tag color={job.recruitment_status === "closed" ? "red" : "default"}>{displayStatus(job)}</Tag></Space>
+        <Space wrap><Tag color="blue">{job.city}</Tag><Tag>{job.source.name}</Tag>{job.last_update_mode === "replay" && <Tag color="purple">本地回放数据</Tag>}<Tag color={job.recruitment_status === "closed" ? "red" : "default"}>{displayStatus(job)}</Tag></Space>
       </div>
       <Typography.Paragraph className="requirements-summary">{job.requirements_summary}</Typography.Paragraph>
       <Descriptions size="small" column={{ xs: 1, sm: 2 }}>

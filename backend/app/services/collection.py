@@ -117,7 +117,11 @@ def _ingest_job(
     list_artifact: CollectionArtifact,
     detail_artifact: CollectionArtifact,
     observed_at: datetime,
+    origin: str = "live",
+    existing_only: bool = False,
 ) -> str:
+    if origin not in {"live", "replay"}:
+        raise ValueError("不支持的入库来源")
     if normalized.recruitment_status == "closed" and (
         not normalized.explicit_closed or not normalized.closed_evidence_text
     ):
@@ -132,6 +136,8 @@ def _ingest_job(
     )
     changes = compare_tracked_fields(job, normalized) if job else []
     if job is None:
+        if existing_only:
+            raise ValueError("回放只能更新已经真实采集的岗位")
         job = Job(
             source_id=source.id,
             external_identity=normalized.external_identity,
@@ -147,7 +153,7 @@ def _ingest_job(
             detail_url=normalized.detail_url,
             first_seen_at=observed_at,
             last_seen_at=observed_at,
-            last_live_seen_at=observed_at,
+            last_live_seen_at=observed_at if origin == "live" else None,
             current_content_hash=normalized.content_hash,
             created_by_run_id=run.id,
             updated_by_run_id=run.id,
@@ -169,7 +175,8 @@ def _ingest_job(
         job.status_provided = normalized.recruitment_status is not None
         job.detail_url = normalized.detail_url
         job.last_seen_at = observed_at
-        job.last_live_seen_at = observed_at
+        if origin == "live":
+            job.last_live_seen_at = observed_at
         job.current_content_hash = normalized.content_hash
         job.updated_by_run_id = run.id
         if result == "changed":
@@ -205,7 +212,7 @@ def _ingest_job(
             run_id=run.id,
             observation_id=observation.id,
             change_hash=_change_hash(job, normalized),
-            origin="live",
+            origin=origin,
             detected_at=observed_at,
         )
         db.add(change_set)

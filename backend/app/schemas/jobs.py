@@ -23,6 +23,8 @@ class JobListItem(BaseModel):
     status_provided: bool
     detail_url: str
     last_seen_at: datetime
+    last_live_seen_at: datetime | None
+    last_update_mode: str
     source: SourceBrief
     is_watched: bool
 
@@ -42,6 +44,8 @@ class JobDetail(BaseModel):
     detail_url: str
     first_seen_at: datetime
     last_seen_at: datetime
+    last_live_seen_at: datetime | None
+    last_update_mode: str
     last_changed_at: datetime | None
     source: SourceBrief
     is_watched: bool
