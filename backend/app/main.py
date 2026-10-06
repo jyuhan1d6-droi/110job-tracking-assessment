@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.auth import router as auth_router
@@ -9,12 +11,20 @@ from app.api.watches import router as watches_router
 from app.api.watch_events import router as watch_events_router
 from app.api.replay import router as replay_router
 from app.core.config import settings
+from app.services.collection_admin import recover_interrupted_live_runs
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    recover_interrupted_live_runs()
+    yield
 
 app = FastAPI(
     title="岗位搜索与变更追踪 API",
     version="0.1.0",
     docs_url="/api/docs" if settings.app_env != "production" else None,
     openapi_url="/api/openapi.json" if settings.app_env != "production" else None,
+    lifespan=lifespan,
 )
 app.include_router(health_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")

@@ -22,24 +22,31 @@ TARGET_VALID_JOBS = 10
 MAX_LIST_PAGES = 3
 
 
-def collect_shixiseng(db: Session, *, triggered_by_user_id: uuid.UUID) -> CollectionRun:
+def collect_shixiseng(
+    db: Session, *, triggered_by_user_id: uuid.UUID, existing_run: CollectionRun | None = None
+) -> CollectionRun:
     source = db.scalar(select(Source).where(Source.code == "shixiseng", Source.enabled.is_(True)))
     if source is None:
         raise ValueError("实习僧来源未初始化或已禁用")
-    run = CollectionRun(
-        source_id=source.id,
-        triggered_by_user_id=triggered_by_user_id,
-        mode="live",
-        status="running",
-        request_metadata={"collector": "shixiseng", "list_pages": 0, "request_count": 0, "retry_count": 0},
-    )
-    db.add(run)
-    try:
+    if existing_run is None:
+        run = CollectionRun(
+            source_id=source.id, triggered_by_user_id=triggered_by_user_id, mode="live", status="running",
+            request_metadata={"collector": "shixiseng", "list_pages": 0, "request_count": 0, "retry_count": 0},
+        )
+        db.add(run)
+        try:
+            db.commit()
+        except IntegrityError as exc:
+            db.rollback()
+            raise CollectionConflictError("实习僧已有正在执行的采集") from exc
+        db.refresh(run)
+    else:
+        run = existing_run
+        if run.source_id != source.id or run.mode != "live" or run.status != "pending":
+            raise ValueError("预创建采集运行状态无效")
+        run.status = "running"
+        run.request_metadata = {"collector": "shixiseng", "list_pages": 0, "request_count": 0, "retry_count": 0}
         db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise CollectionConflictError("实习僧已有正在执行的采集") from exc
-    db.refresh(run)
 
     client = EvidenceHttpClient(
         timeout_seconds=source.timeout_seconds,
@@ -68,7 +75,6 @@ def collect_shixiseng(db: Session, *, triggered_by_user_id: uuid.UUID) -> Collec
                 },
             )
             list_pages += 1
-            run.http_status = response.status_code
             for job_id, title in parse_list(response.body):
                 if job_id in seen_ids:
                     continue

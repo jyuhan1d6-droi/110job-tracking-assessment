@@ -237,24 +237,31 @@ def _ingest_job(
     return result
 
 
-def collect_360_careers(db: Session, *, triggered_by_user_id: uuid.UUID) -> CollectionRun:
+def collect_360_careers(
+    db: Session, *, triggered_by_user_id: uuid.UUID, existing_run: CollectionRun | None = None
+) -> CollectionRun:
     source = db.scalar(select(Source).where(Source.code == "360-careers", Source.enabled.is_(True)))
     if source is None:
         raise ValueError("360 招聘来源未初始化或已禁用")
-    run = CollectionRun(
-        source_id=source.id,
-        triggered_by_user_id=triggered_by_user_id,
-        mode="live",
-        status="running",
-        request_metadata={"collector": "360_careers", "list_pages": 0, "request_count": 0, "retry_count": 0},
-    )
-    db.add(run)
-    try:
+    if existing_run is None:
+        run = CollectionRun(
+            source_id=source.id, triggered_by_user_id=triggered_by_user_id, mode="live", status="running",
+            request_metadata={"collector": "360_careers", "list_pages": 0, "request_count": 0, "retry_count": 0},
+        )
+        db.add(run)
+        try:
+            db.commit()
+        except IntegrityError as exc:
+            db.rollback()
+            raise CollectionConflictError("360 招聘已有正在执行的采集") from exc
+        db.refresh(run)
+    else:
+        run = existing_run
+        if run.source_id != source.id or run.mode != "live" or run.status != "pending":
+            raise ValueError("预创建采集运行状态无效")
+        run.status = "running"
+        run.request_metadata = {"collector": "360_careers", "list_pages": 0, "request_count": 0, "retry_count": 0}
         db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise CollectionConflictError("360 招聘已有正在执行的采集") from exc
-    db.refresh(run)
 
     client = EvidenceHttpClient(
         timeout_seconds=source.timeout_seconds,
@@ -269,7 +276,6 @@ def collect_360_careers(db: Session, *, triggered_by_user_id: uuid.UUID) -> Coll
             db, run=run, response=list_response, filename="list-page-001.json", artifact_type="list_json"
         )
         listings = parse_list(list_response.json())
-        run.http_status = list_response.status_code
         run.fetched_count = len(listings)
 
         seen_ids: set[str] = set()
