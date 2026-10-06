@@ -11,8 +11,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.collectors.base import NormalizedJob, tracked_content_hash, write_evidence
+from app.collectors.careers_360 import parse_detail as parse_360_detail
+from app.collectors.deadlines import normalize_deadline
+from app.collectors.shixiseng import parse_detail as parse_shixiseng_detail
 from app.core.config import settings
 from app.models.collection import CollectionArtifact, CollectionRun
+from app.models.job import Job
 from app.models.source import Source
 from app.schemas.replay import ReplayJob, ReplayScenario, ReplaySnapshot
 from app.services.collection import CollectionConflictError, _ingest_job
@@ -118,14 +122,42 @@ def _artifact(db: Session, run: CollectionRun, source_file: Path, filename: str,
     return artifact
 
 
-def _normalized(job: ReplayJob) -> NormalizedJob:
+def _base_artifact_job(source_code: str, provenance_file: str, expected_identity: str) -> NormalizedJob:
+    body, _ = _bytes_and_hash(provenance_file, Path("raw"))
+    if source_code == "shixiseng":
+        prefix = "shixiseng:"
+        if not expected_identity.startswith(prefix):
+            raise ValueError("回放岗位 identity 与实习僧来源不一致")
+        return parse_shixiseng_detail(body, expected_identity.removeprefix(prefix))
+    if source_code == "360-careers":
+        return parse_360_detail(json.loads(body))
+    raise ValueError(f"来源 {source_code} 尚不支持 baseArtifact 字段校验")
+
+
+def _normalized(job: ReplayJob, *, source_code: str, current: Job, base: NormalizedJob) -> NormalizedJob:
     if job.status not in {None, "open", "closed"}:
         raise ValueError("回放岗位 status 只能是 open、closed 或 null")
     if job.status == "closed" and not (job.explicit_closed_evidence or "").strip():
         raise ValueError("回放明确关闭必须包含 explicitClosedEvidence")
+    immutable = (
+        ("title", job.title, base.title),
+        ("company", job.company, base.company),
+        ("city", job.city, base.city),
+        ("detail_url", job.detail_url, base.detail_url),
+    )
+    mismatched = [name for name, replay_value, base_value in immutable if replay_value != base_value]
+    if mismatched:
+        raise ValueError(f"回放基础字段与 baseArtifact 不一致：{', '.join(mismatched)}")
+    if job.identity != base.external_identity:
+        raise ValueError("回放 identity 与 baseArtifact 不一致")
+    deadline_at = (
+        current.deadline_at
+        if job.deadline == current.deadline_raw
+        else normalize_deadline(source_code, job.deadline)
+    )
     return NormalizedJob(
         external_identity=job.identity, title=job.title, company=job.company, city=job.city,
-        requirements=job.requirements, deadline_raw=job.deadline, deadline_at=None,
+        requirements=job.requirements, deadline_raw=job.deadline, deadline_at=deadline_at,
         recruitment_status=job.status, detail_url=job.detail_url,
         explicit_closed=job.status == "closed", closed_evidence_text=job.explicit_closed_evidence,
         content_hash=tracked_content_hash(job.requirements, job.deadline, job.status),
@@ -174,8 +206,18 @@ def run_replay(db: Session, scenario_id: str, triggered_by_user_id: uuid.UUID) -
             now = datetime.now(timezone.utc)
             for replay_job in snapshot.jobs:
                 try:
+                    current = db.scalar(select(Job).where(
+                        Job.source_id == source.id,
+                        Job.external_identity == replay_job.identity,
+                    ))
+                    if current is None:
+                        raise ValueError("回放只能更新已经真实采集的岗位")
+                    base = _base_artifact_job(source.code, scenario.provenance_file, replay_job.identity)
                     result = _ingest_job(
-                        db, run=run, source=source, normalized=_normalized(replay_job),
+                        db, run=run, source=source,
+                        normalized=_normalized(
+                            replay_job, source_code=source.code, current=current, base=base
+                        ),
                         list_artifact=snapshot_artifact, detail_artifact=snapshot_artifact,
                         observed_at=now, origin="replay", existing_only=True,
                     )

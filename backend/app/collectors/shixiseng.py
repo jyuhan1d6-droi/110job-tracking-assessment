@@ -1,8 +1,6 @@
 import re
-from datetime import datetime
 from typing import Any
 from urllib.parse import urlunsplit
-from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
 
@@ -13,6 +11,7 @@ from app.collectors.base import (
     NormalizedJob,
     tracked_content_hash,
 )
+from app.collectors.deadlines import normalize_deadline
 
 BASE_URL = "https://www.shixiseng.com"
 LIST_URL = f"{BASE_URL}/interns/"
@@ -78,9 +77,7 @@ def parse_detail(html: bytes, expected_job_id: str) -> NormalizedJob:
         match = DEADLINE_PATTERN.search(clean_text(node.get_text(" ", strip=True)))
         if match:
             deadline_raw = match.group(1)
-            deadline_at = datetime.strptime(deadline_raw, "%Y-%m-%d").replace(
-                hour=23, minute=59, second=59, tzinfo=ZoneInfo("Asia/Shanghai")
-            )
+            deadline_at = normalize_deadline("shixiseng", deadline_raw)
             break
 
     detail_url = urlunsplit(("https", "www.shixiseng.com", f"/intern/{expected_job_id}", "", ""))

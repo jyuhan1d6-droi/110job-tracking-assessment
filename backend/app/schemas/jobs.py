@@ -24,6 +24,7 @@ class JobListItem(BaseModel):
     detail_url: str
     last_seen_at: datetime
     last_live_seen_at: datetime | None
+    last_replay_seen_at: datetime | None
     last_update_mode: str
     source: SourceBrief
     is_watched: bool
@@ -45,6 +46,7 @@ class JobDetail(BaseModel):
     first_seen_at: datetime
     last_seen_at: datetime
     last_live_seen_at: datetime | None
+    last_replay_seen_at: datetime | None
     last_update_mode: str
     last_changed_at: datetime | None
     source: SourceBrief

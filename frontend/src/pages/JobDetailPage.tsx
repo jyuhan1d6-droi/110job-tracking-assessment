@@ -27,8 +27,8 @@ export default function JobDetailPage() {
           <Descriptions.Item label="截止时间">{job.deadline_provided ? job.deadline_raw : "未提供"}</Descriptions.Item>
           <Descriptions.Item label="招聘状态">{displayStatus(job)}</Descriptions.Item>
           <Descriptions.Item label="首次抓取">{new Date(job.first_seen_at).toLocaleString("zh-CN")}</Descriptions.Item>
-          <Descriptions.Item label="最近抓取">{new Date(job.last_seen_at).toLocaleString("zh-CN")}</Descriptions.Item>
           <Descriptions.Item label="最近真实采集">{job.last_live_seen_at ? new Date(job.last_live_seen_at).toLocaleString("zh-CN") : "暂无"}</Descriptions.Item>
+          <Descriptions.Item label="最近回放处理">{job.last_replay_seen_at ? new Date(job.last_replay_seen_at).toLocaleString("zh-CN") : "未回放"}</Descriptions.Item>
           <Descriptions.Item label="当前数据来源">{job.last_update_mode === "replay" ? "本地回放" : "真实采集"}</Descriptions.Item>
           <Descriptions.Item label="最近变化">{job.last_changed_at ? new Date(job.last_changed_at).toLocaleString("zh-CN") : "暂无"}</Descriptions.Item>
           <Descriptions.Item label="来源类型">{job.source.source_type === "company_careers" ? "公司官方招聘" : "招聘平台"}</Descriptions.Item>

@@ -19,7 +19,8 @@ export default function JobCard({ job }: { job: JobListItem }) {
       <Typography.Paragraph className="requirements-summary">{job.requirements_summary}</Typography.Paragraph>
       <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
         <Descriptions.Item label="截止时间">{job.deadline_provided ? job.deadline_raw : "未提供"}</Descriptions.Item>
-        <Descriptions.Item label="最近抓取">{new Date(job.last_seen_at).toLocaleString("zh-CN")}</Descriptions.Item>
+        <Descriptions.Item label="最近真实采集">{job.last_live_seen_at ? new Date(job.last_live_seen_at).toLocaleString("zh-CN") : "暂无"}</Descriptions.Item>
+        <Descriptions.Item label="最近回放处理">{job.last_replay_seen_at ? new Date(job.last_replay_seen_at).toLocaleString("zh-CN") : "未回放"}</Descriptions.Item>
       </Descriptions>
       <Space>
         <Link to={`/jobs/${job.id}`} state={{ from: `${location.pathname}${location.search}` }}><Button type="primary">查看详情</Button></Link>

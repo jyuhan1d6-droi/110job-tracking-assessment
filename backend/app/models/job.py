@@ -46,6 +46,7 @@ class Job(Base):
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_live_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_replay_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     current_content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     created_by_run_id: Mapped[uuid.UUID] = mapped_column(

@@ -56,17 +56,20 @@ def test_tracked_field_changes_a_b_a_and_explicit_close_are_persisted():
         db.add_all([user, source])
         db.flush()
 
-        def make_run_and_artifacts(index: int, *, new: int = 0, changed: int = 0):
+        def make_run_and_artifacts(
+            index: int, *, new: int = 0, changed: int = 0, unchanged: int = 0,
+            mode: str = "live",
+        ):
             run = CollectionRun(
                 source_id=source.id,
                 triggered_by_user_id=user.id,
-                mode="live",
+                mode=mode,
                 status="success",
                 fetched_count=1,
                 valid_count=1,
                 new_count=new,
                 changed_count=changed,
-                unchanged_count=0,
+                unchanged_count=unchanged,
                 failed_count=0,
                 request_metadata={},
             )
@@ -117,6 +120,41 @@ def test_tracked_field_changes_a_b_a_and_explicit_close_are_persisted():
             )
 
         assert event_count(first_watch, second_watch) == 0
+
+        hash_only_difference = replace(state_a, content_hash="f" * 64)
+        run_hash, list_hash, detail_hash = make_run_and_artifacts(5, unchanged=1)
+        assert _ingest_job(
+            db, run=run_hash, source=source, normalized=hash_only_difference,
+            list_artifact=list_hash, detail_artifact=detail_hash,
+            observed_at=start + timedelta(seconds=45),
+        ) == "unchanged"
+        assert db.scalar(select(JobChangeSet).where(JobChangeSet.run_id == run_hash.id)) is None
+        assert event_count(first_watch, second_watch) == 0
+        live_seen_before_replay = job.last_live_seen_at
+
+        replay_state = replace(
+            state_a,
+            title="baseArtifact 中的历史标题",
+            company="baseArtifact 中的历史公司",
+            city="baseArtifact 中的历史城市",
+            detail_url="https://example.test/base-artifact/job",
+        )
+        run_replay, list_replay, detail_replay = make_run_and_artifacts(
+            6, unchanged=1, mode="replay"
+        )
+        replayed_at = start + timedelta(seconds=50)
+        assert _ingest_job(
+            db, run=run_replay, source=source, normalized=replay_state,
+            list_artifact=list_replay, detail_artifact=detail_replay,
+            observed_at=replayed_at, origin="replay", existing_only=True,
+        ) == "unchanged"
+        assert job.title == "测试岗位"
+        assert job.company == "测试公司"
+        assert job.city == "北京"
+        assert job.detail_url == "https://example.test/job/stable-id"
+        assert job.last_live_seen_at == live_seen_before_replay
+        assert job.last_replay_seen_at == replayed_at
+        assert db.scalar(select(JobChangeSet).where(JobChangeSet.run_id == run_replay.id)) is None
 
         state_b = normalized(requirements="要求 B", deadline="2027-01-01", status="open")
         run2, list2, detail2 = make_run_and_artifacts(2, changed=1)

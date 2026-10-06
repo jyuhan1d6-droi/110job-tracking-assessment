@@ -3,6 +3,7 @@ from datetime import timedelta
 import pytest
 
 from app.collectors.base import ExplicitClosureDetected
+from app.collectors.deadlines import normalize_deadline
 from app.collectors.shixiseng import has_private_use_characters, parse_detail, parse_list
 
 
@@ -32,6 +33,15 @@ def test_parse_detail_extracts_fields_and_explicit_deadline():
     assert job.deadline_at is not None
     assert job.deadline_at.utcoffset() == timedelta(hours=8)
     assert job.recruitment_status is None
+
+
+def test_shared_deadline_normalizer_preserves_source_semantics():
+    parsed = normalize_deadline("shixiseng", "2026-12-31")
+    assert parsed is not None
+    assert parsed.hour == 23 and parsed.minute == 59 and parsed.second == 59
+    assert parsed.utcoffset() == timedelta(hours=8)
+    assert normalize_deadline("shixiseng", "无法确定") is None
+    assert normalize_deadline("360-careers", "2026-12-31") is None
 
 
 def test_private_use_font_characters_are_rejected():

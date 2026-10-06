@@ -163,20 +163,24 @@ def _ingest_job(
         db.flush()
         result = "new"
     else:
-        result = "unchanged" if job.current_content_hash == normalized.content_hash else "changed"
-        job.title = normalized.title
-        job.company = normalized.company
-        job.city = normalized.city
+        result = "changed" if changes else "unchanged"
+        if origin == "live":
+            job.title = normalized.title
+            job.company = normalized.company
+            job.city = normalized.city
         job.requirements = normalized.requirements
         job.deadline_raw = normalized.deadline_raw
         job.deadline_at = normalized.deadline_at
         job.deadline_provided = normalized.deadline_raw is not None
         job.recruitment_status = normalized.recruitment_status
         job.status_provided = normalized.recruitment_status is not None
-        job.detail_url = normalized.detail_url
+        if origin == "live":
+            job.detail_url = normalized.detail_url
         job.last_seen_at = observed_at
         if origin == "live":
             job.last_live_seen_at = observed_at
+        else:
+            job.last_replay_seen_at = observed_at
         job.current_content_hash = normalized.content_hash
         job.updated_by_run_id = run.id
         if result == "changed":
@@ -207,6 +211,8 @@ def _ingest_job(
     db.flush()
 
     if result == "changed":
+        if not changes:
+            raise RuntimeError("不能为没有实际字段变化的岗位创建 change set")
         change_set = JobChangeSet(
             job_id=job.id,
             run_id=run.id,

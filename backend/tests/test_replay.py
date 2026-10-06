@@ -1,5 +1,6 @@
 import uuid
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -9,7 +10,9 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.collection import CollectionArtifact, CollectionRun
-from app.services.replay import _safe_path, list_replay_scenarios
+from app.models.job import Job
+from app.schemas.replay import ReplayJob
+from app.services.replay import _base_artifact_job, _normalized, _safe_path, list_replay_scenarios
 
 
 def test_official_replay_manifest_and_hashes_are_valid():
@@ -66,3 +69,54 @@ def test_replay_rejects_path_traversal():
         assert "不安全" in str(exc)
     else:
         raise AssertionError("path traversal should be rejected")
+
+
+def test_replay_immutable_fields_are_checked_against_base_artifact_and_deadline_is_preserved():
+    scenario = next(item for item in list_replay_scenarios() if item.step_id == "baseline")
+    base = _base_artifact_job("shixiseng", scenario.provenance_file, "shixiseng:inn_9g4ply6sfzje")
+    existing_deadline = datetime(2027, 10, 6, 23, 59, 59, tzinfo=timezone.utc)
+    current = Job(
+        external_identity=base.external_identity,
+        title="当前真实采集可有更新标题",
+        company="当前真实采集可有更新公司",
+        city="当前真实采集可有更新城市",
+        requirements=base.requirements,
+        deadline_raw=base.deadline_raw,
+        deadline_at=existing_deadline,
+        recruitment_status=None,
+        detail_url="https://current.example/job",
+    )
+    replay = ReplayJob(
+        identity=base.external_identity, title=base.title, company=base.company, city=base.city,
+        requirements=base.requirements, deadline=base.deadline_raw, status=None,
+        detailUrl=base.detail_url,
+    )
+    normalized = _normalized(replay, source_code="shixiseng", current=current, base=base)
+    assert normalized.deadline_at == existing_deadline
+
+    changed_title = replay.model_copy(update={"title": "不是 baseArtifact 的标题"})
+    try:
+        _normalized(changed_title, source_code="shixiseng", current=current, base=base)
+    except ValueError as exc:
+        assert "title" in str(exc)
+    else:
+        raise AssertionError("replay immutable fields must match baseArtifact")
+
+
+def test_replay_deadline_change_uses_shared_normalizer():
+    scenario = next(item for item in list_replay_scenarios() if item.step_id == "baseline")
+    base = _base_artifact_job("shixiseng", scenario.provenance_file, "shixiseng:inn_9g4ply6sfzje")
+    current = Job(
+        external_identity=base.external_identity, title=base.title, company=base.company,
+        city=base.city, requirements=base.requirements, deadline_raw=base.deadline_raw,
+        deadline_at=base.deadline_at, recruitment_status=None, detail_url=base.detail_url,
+    )
+    replay = ReplayJob(
+        identity=base.external_identity, title=base.title, company=base.company, city=base.city,
+        requirements=base.requirements, deadline="2028-01-02", status=None,
+        detailUrl=base.detail_url,
+    )
+    normalized = _normalized(replay, source_code="shixiseng", current=current, base=base)
+    assert normalized.deadline_at is not None
+    assert normalized.deadline_at.year == 2028
+    assert normalized.deadline_at.utcoffset().total_seconds() == 8 * 3600
