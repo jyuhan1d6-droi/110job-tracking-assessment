@@ -43,6 +43,8 @@
    docker-compose up --build
    ```
 
+   首次启动会等待 PostgreSQL 健康、自动执行全部 Alembic 迁移，再幂等初始化三个账号和两个固定来源。无需在宿主机安装 Node.js、Python 或 PostgreSQL。
+
 4. 打开 <http://localhost:8080>。
 
 5. 健康检查：
@@ -62,19 +64,31 @@
 
 应用通过 Nginx 同源访问后端，认证使用数据库中的服务端 Session 和 HttpOnly Cookie。HTTP 验收环境使用 `SESSION_COOKIE_SECURE=false`；部署到 HTTPS 后必须设为 `true`。重新运行初始化不会覆盖已有账号密码。
 
-停止容器但保留数据：
+停止容器但保留 PostgreSQL 数据卷：
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 重建容器并验证数据卷：
 
 ```bash
-docker-compose up --build --force-recreate
+docker compose up -d --build --force-recreate
+docker compose ps
 ```
 
-不要使用 `docker-compose down -v`，该命令会删除数据库卷。采集证据直接保存在项目根目录的 `evidence/`，便于检查和提交。
+三个服务均显示 `healthy` 后再访问应用。不要使用 `docker compose down -v`，该命令会删除数据库卷。采集证据直接保存在项目根目录的 `evidence/`，便于检查和提交。
+
+## 实际操作顺序
+
+1. 使用 `maintainer` 登录，进入“数据采集”，分别选择 360 招聘和实习僧。点击“开始真实采集”后，在运行历史查看新增、变化、未变化、失败数量与失败原因；“详情与证据”用于核对每个原始响应的路径、大小、HTTP 状态和 SHA-256。
+2. 使用普通账号登录“岗位”，按关键词和城市搜索。两项同时填写时执行 AND 查询；首次还没有岗位时，页面会提示联系维护账号先采集。
+3. 在岗位页保存当前条件。筛选方案可使用、编辑和删除；再次使用时会查询当前数据库，不复用旧结果。
+4. 在岗位列表或详情关注岗位；“我的关注”仅显示当前账号仍在关注的岗位。
+5. 维护账号可在“本地回放”执行明确标注的回放场景。回放不会访问外部招聘网站，也不会作为新的真实采集结果。
+6. 普通账号进入“关注动态”查看关注期间产生的变化，再进入变化详情核对字段修改前后内容；关注前或取消关注期间的变化不会补发。
+
+本步骤已在独立 Compose 项目中验证全新空卷启动、迁移初始化、保留数据卷重建和整套服务重启。验证记录见 `evidence/reports/automated/step14-docker-validation.md`。
 
 ## 当前状态
 
